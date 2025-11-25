@@ -14,8 +14,6 @@ export default function EditorScreen() {
   const [content, setContent] = useState('');
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mediaItemIds, setMediaItemIds] = useState<string[]>([]);
-  const [albumId, setAlbumId] = useState<string | undefined>();
   const [albumShareUrl, setAlbumShareUrl] = useState<string | undefined>();
 
   useEffect(() => {
@@ -32,8 +30,6 @@ export default function EditorScreen() {
         setTitle(story.title);
         setContent(story.content);
         setLocation(story.location);
-        setMediaItemIds(story.mediaItemIds || []);
-        setAlbumId(story.albumId);
         setAlbumShareUrl(story.albumShareUrl);
       }
     } catch (error) {
@@ -56,8 +52,6 @@ export default function EditorScreen() {
         content: content.trim(),
         location: location.trim() || 'Unknown Location',
         isDraft: true,
-        mediaItemIds,
-        albumId,
         albumShareUrl,
       });
       router.back();
@@ -69,9 +63,7 @@ export default function EditorScreen() {
     }
   };
 
-  const handleMediaSelected = (items: string[], album: string, shareUrl: string) => {
-    setMediaItemIds(items);
-    setAlbumId(album);
+  const handleMediaSelected = (shareUrl: string) => {
     setAlbumShareUrl(shareUrl);
   };
 
@@ -126,12 +118,10 @@ export default function EditorScreen() {
         </ScrollView>
 
         <View style={styles.toolbar}>
-          <MediaPicker onMediaSelected={handleMediaSelected} />
-          {mediaItemIds.length > 0 && (
-            <Text style={styles.mediaCount}>
-              {mediaItemIds.length} {mediaItemIds.length === 1 ? 'photo' : 'photos'} selected
-            </Text>
-          )}
+          <MediaPicker 
+            onMediaSelected={handleMediaSelected}
+            initialAlbumUrl={albumShareUrl}
+          />
         </View>
       </SafeAreaView>
     </View>
@@ -205,9 +195,6 @@ const styles = StyleSheet.create({
     minHeight: 300,
   },
   toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderTopWidth: 1,

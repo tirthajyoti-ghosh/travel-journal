@@ -60,8 +60,6 @@ export async function saveStory(story: Partial<Story>): Promise<Story> {
         location: story.location || '',
         content: story.content || '',
         images: story.images || [],
-        mediaItemIds: story.mediaItemIds || [],
-        albumId: story.albumId,
         albumShareUrl: story.albumShareUrl,
         isDraft: story.isDraft !== undefined ? story.isDraft : true,
         createdAt: now,
@@ -97,4 +95,28 @@ export async function deleteStory(id: string): Promise<void> {
  */
 function generateId(): string {
   return `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Save generic data to AsyncStorage
+ */
+export async function saveData(key: string, value: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch (error) {
+    console.error('Error saving data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get generic data from AsyncStorage
+ */
+export async function getData(key: string): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(key);
+  } catch (error) {
+    console.error('Error getting data:', error);
+    return null;
+  }
 }

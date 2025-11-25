@@ -85,9 +85,7 @@ export default function ViewerScreen() {
               onPress={() => Linking.openURL(story.albumShareUrl!)}
             >
               <Feather name="image" size={20} color={colors.white} />
-              <Text style={styles.photoButtonText}>
-                View Photos ({story.mediaItemIds?.length || 0})
-              </Text>
+              <Text style={styles.photoButtonText}>View Album Photos</Text>
             </TouchableOpacity>
           )}
           

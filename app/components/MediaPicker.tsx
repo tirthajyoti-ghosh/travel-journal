@@ -1,112 +1,255 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Modal } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import * as googleAuthService from '@/services/googleAuthService';
-import * as googlePhotosService from '@/services/googlePhotosService';
+import * as storageService from '@/services/storageService';
+import { AlbumPhotoBrowser } from './AlbumPhotoBrowser';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 
 interface MediaPickerProps {
-  onMediaSelected: (mediaItemIds: string[], albumId: string, albumShareUrl: string) => void;
+  onMediaSelected: (albumShareUrl: string) => void;
+  initialAlbumUrl?: string;
 }
 
-export function MediaPicker({ onMediaSelected }: MediaPickerProps) {
-  const [loading, setLoading] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
+const ALBUM_URL_KEY = '@travel_journal:google_photos_album_url';
 
-  const handleSignIn = async () => {
-    setLoading(true);
+export function MediaPicker({ onMediaSelected, initialAlbumUrl }: MediaPickerProps) {
+  const [albumUrl, setAlbumUrl] = useState<string>(initialAlbumUrl || '');
+  const [inputUrl, setInputUrl] = useState<string>('');
+  const [showBrowser, setShowBrowser] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStoredAlbumUrl();
+  }, []);
+
+  const loadStoredAlbumUrl = async () => {
     try {
-      const token = await googleAuthService.signInToGoogle();
-      if (token) {
-        setSignedIn(true);
-        Alert.alert('Success', 'Signed in to Google Photos!');
-      } else {
-        Alert.alert('Error', 'Failed to sign in. Please try again.');
+      if (initialAlbumUrl) {
+        setAlbumUrl(initialAlbumUrl);
+        setLoading(false);
+        return;
+      }
+
+      const stored = await storageService.getData(ALBUM_URL_KEY);
+      if (stored) {
+        setAlbumUrl(stored);
       }
     } catch (error) {
-      console.error('Sign in error:', error);
-      Alert.alert('Error', 'Failed to sign in to Google Photos');
+      console.error('Error loading album URL:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePickPhotos = async () => {
-    setLoading(true);
-    try {
-      // Check if signed in
-      const isSignedIn = await googleAuthService.isSignedIn();
-      if (!isSignedIn) {
-        Alert.alert(
-          'Sign In Required',
-          'Please sign in to Google Photos first',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign In', onPress: handleSignIn },
-          ]
-        );
-        setLoading(false);
-        return;
-      }
-
-      // For now, show a placeholder message
-      // In a real implementation, we'd open Google Photos Picker here
-      Alert.alert(
-        'Photo Picker',
-        'Google Photos Picker integration coming soon!\n\nFor now, you can:\n1. Get photos from Google Photos app\n2. Copy the share link\n3. Paste it in the story',
-        [{ text: 'OK' }]
-      );
-
-      // Mock implementation - in real version this would open picker
-      // const mediaItemIds = await openPhotoPicker();
-      // const album = await googlePhotosService.getOrCreateSharedAlbum();
-      // if (album) {
-      //   await googlePhotosService.addMediaToAlbum(album.id, mediaItemIds);
-      //   onMediaSelected(mediaItemIds, album.id, album.shareUrl);
-      // }
-    } catch (error) {
-      console.error('Photo picker error:', error);
-      Alert.alert('Error', 'Failed to pick photos');
-    } finally {
-      setLoading(false);
+  const handleSaveUrl = async () => {
+    const trimmedUrl = inputUrl.trim();
+    
+    if (!trimmedUrl) {
+      Alert.alert('Error', 'Please enter a valid Google Photos album URL');
+      return;
     }
+
+    // Basic validation for Google Photos URL
+    if (!trimmedUrl.includes('photos.google.com') && !trimmedUrl.includes('photos.app.goo.gl')) {
+      Alert.alert('Error', 'Please enter a valid Google Photos share URL');
+      return;
+    }
+
+    try {
+      setAlbumUrl(trimmedUrl);
+      await storageService.saveData(ALBUM_URL_KEY, trimmedUrl);
+      onMediaSelected(trimmedUrl);
+      setIsEditing(false);
+      setInputUrl('');
+    } catch (error) {
+      console.error('Error saving album URL:', error);
+      Alert.alert('Error', 'Failed to save album URL. Please try again.');
+    }
+  };
+
+  const handleEditUrl = () => {
+    setInputUrl(albumUrl);
+    setIsEditing(true);
+  };
+
+  const handleOpenBrowser = () => {
+    setShowBrowser(true);
+  };
+
+  const handleCloseBrowser = () => {
+    setShowBrowser(false);
   };
 
   if (loading) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="small" color={colors.accent} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (isEditing || !albumUrl) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.label}>Google Photos Album URL</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="https://photos.app.goo.gl/xxxxx"
+          placeholderTextColor={colors.text + '60'}
+          value={inputUrl}
+          onChangeText={setInputUrl}
+          autoCapitalize="none"
+          autoCorrect={false}
+          multiline
+        />
+        <Text style={styles.helperText}>
+          Create a shared album in Google Photos and paste the share link here
+        </Text>
+        <View style={styles.buttonRow}>
+          {albumUrl && (
+            <TouchableOpacity 
+              style={[styles.button, styles.secondaryButton]} 
+              onPress={() => {
+                setIsEditing(false);
+                setInputUrl('');
+              }}
+            >
+              <Text style={styles.secondaryButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            style={[styles.button, styles.primaryButton]} 
+            onPress={handleSaveUrl}
+          >
+            <Feather name="save" size={16} color={colors.white} />
+            <Text style={styles.buttonText}>Save Album</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={handlePickPhotos}>
-        <Feather name="image" size={20} color={colors.white} />
-        <Text style={styles.buttonText}>Add Photos</Text>
-      </TouchableOpacity>
+      {showBrowser && albumUrl && (
+        <Modal
+          visible={showBrowser}
+          animationType="slide"
+          presentationStyle="fullScreen"
+          onRequestClose={handleCloseBrowser}
+        >
+          <AlbumPhotoBrowser
+            albumShareUrl={albumUrl}
+            onClose={handleCloseBrowser}
+          />
+        </Modal>
+      )}
+      
+      <View style={styles.albumInfo}>
+        <Feather name="image" size={20} color={colors.accent} />
+        <Text style={styles.albumText} numberOfLines={1}>Album linked</Text>
+      </View>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={handleEditUrl}>
+          <Feather name="edit-2" size={16} color={colors.accent} />
+          <Text style={styles.secondaryButtonText}>Change</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={handleOpenBrowser}>
+          <Feather name="eye" size={16} color={colors.white} />
+          <Text style={styles.buttonText}>View Photos</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 8,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  label: {
+    color: colors.text,
+    fontFamily: typography.fonts.ui,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  input: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.accent + '40',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.text,
+    fontFamily: typography.fonts.ui,
+    fontSize: 14,
+    minHeight: 60,
+  },
+  helperText: {
+    color: colors.text,
+    fontFamily: typography.fonts.ui,
+    fontSize: 12,
+    opacity: 0.6,
+    marginTop: -4,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
   },
   button: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    gap: 6,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 8,
+  },
+  primaryButton: {
+    backgroundColor: colors.accent,
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.accent,
   },
   buttonText: {
     color: colors.white,
     fontFamily: typography.fonts.ui,
     fontSize: 14,
+    fontWeight: '600',
+  },
+  secondaryButtonText: {
+    color: colors.accent,
+    fontFamily: typography.fonts.ui,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  albumInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  albumText: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: typography.fonts.ui,
+    fontSize: 14,
+  },
+  loadingText: {
+    marginTop: 8,
+    color: colors.text,
+    fontFamily: typography.fonts.ui,
+    fontSize: 12,
+    textAlign: 'center',
+    opacity: 0.6,
   },
 });

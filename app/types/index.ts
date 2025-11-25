@@ -6,8 +6,6 @@ export interface Story {
   content: string;
   coverImage?: string;
   images: string[];
-  mediaItemIds: string[];
-  albumId?: string;
   albumShareUrl?: string;
   isDraft: boolean;
   createdAt: string;
