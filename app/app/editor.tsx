@@ -1,14 +1,63 @@
-import { useState } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import Feather from '@expo/vector-icons/Feather';
+import * as storageService from '@/services/storageService';
 
 export default function EditorScreen() {
+  const { storyId } = useLocalSearchParams<{ storyId?: string }>();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [location, setLocation] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (storyId) {
+      loadStory();
+    }
+  }, [storyId]);
+
+  const loadStory = async () => {
+    if (!storyId) return;
+    try {
+      const story = await storageService.getStory(storyId);
+      if (story) {
+        setTitle(story.title);
+        setContent(story.content);
+        setLocation(story.location);
+      }
+    } catch (error) {
+      console.error('Failed to load story:', error);
+      Alert.alert('Error', 'Failed to load story');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!title.trim()) {
+      Alert.alert('Missing Title', 'Please add a title to your story');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await storageService.saveStory({
+        id: storyId,
+        title: title.trim(),
+        content: content.trim(),
+        location: location.trim() || 'Unknown Location',
+        isDraft: true,
+      });
+      router.back();
+    } catch (error) {
+      console.error('Failed to save story:', error);
+      Alert.alert('Error', 'Failed to save story. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -17,8 +66,12 @@ export default function EditorScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton}>
-            <Text style={styles.saveText}>Save</Text>
+          <TouchableOpacity 
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
+            onPress={handleSave}
+            disabled={loading}
+          >
+            <Text style={styles.saveText}>{loading ? 'Saving...' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -33,7 +86,16 @@ export default function EditorScreen() {
           />
           
           <View style={styles.metaContainer}>
-            <Text style={styles.metaText}>Today • Current Location</Text>
+            <TextInput
+              style={styles.metaInput}
+              placeholder="Location (e.g., Bangkok, Thailand)"
+              placeholderTextColor={colors.lines}
+              value={location}
+              onChangeText={setLocation}
+            />
+            <Text style={styles.metaText}>
+              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </Text>
           </View>
 
           <TextInput
@@ -79,6 +141,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
   saveText: {
     color: colors.white,
     fontFamily: typography.fonts.ui,
@@ -96,6 +161,16 @@ const styles = StyleSheet.create({
   },
   metaContainer: {
     marginBottom: 24,
+    gap: 8,
+  },
+  metaInput: {
+    fontFamily: typography.fonts.caption,
+    fontSize: 14,
+    color: colors.text,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.polaroidFrame,
+    borderRadius: 8,
   },
   metaText: {
     fontFamily: typography.fonts.caption,

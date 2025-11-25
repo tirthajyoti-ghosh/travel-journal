@@ -7,4 +7,6 @@ export interface Story {
   coverImage?: string;
   images: string[];
   isDraft: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -1,35 +1,60 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { StoryCard } from '@/components/StoryCard';
 import { Story } from '@/types';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import Feather from '@expo/vector-icons/Feather';
-
-// Dummy data
-const DUMMY_STORIES: Story[] = [
-  {
-    id: '1',
-    title: 'Slow Morning in Bangkok',
-    date: '2025-03-28',
-    location: 'Bangkok, Thailand',
-    content: 'I woke up to a soft curtain of fog...',
-    images: [],
-    isDraft: false,
-  },
-  {
-    id: '2',
-    title: 'Rainy Day in Chiang Mai',
-    date: '2025-04-02',
-    location: 'Chiang Mai, Thailand',
-    content: 'The rain started early...',
-    images: [],
-    isDraft: true,
-  },
-];
+import * as storageService from '@/services/storageService';
 
 export default function HomeScreen() {
+  const [stories, setStories] = useState<Story[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadStories = async () => {
+    setLoading(true);
+    try {
+      const loadedStories = await storageService.getStories();
+      // Sort by updatedAt descending (newest first)
+      const sorted = loadedStories.sort((a, b) => 
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+      setStories(sorted);
+    } catch (error) {
+      console.error('Failed to load stories:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load stories when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadStories();
+    }, [])
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyTitle}>No Stories Yet</Text>
+      <Text style={styles.emptyText}>Tap the + button to start writing your first travel story</Text>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.accent} />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -39,7 +64,7 @@ export default function HomeScreen() {
           </View>
           
           <FlatList
-            data={DUMMY_STORIES}
+            data={stories}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <StoryCard 
@@ -48,6 +73,7 @@ export default function HomeScreen() {
               />
             )}
             contentContainerStyle={styles.listContent}
+            ListEmptyComponent={renderEmptyState}
           />
 
           <TouchableOpacity 
@@ -86,6 +112,33 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 100,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontFamily: typography.fonts.display,
+    fontSize: 28,
+    color: colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontFamily: typography.fonts.body,
+    fontSize: 16,
+    color: colors.text,
+    opacity: 0.6,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   fab: {
     position: 'absolute',
