@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
@@ -78,6 +78,19 @@ export default function ViewerScreen() {
         <ScrollView style={styles.scrollContent}>
           <Text style={styles.title}>{story.title}</Text>
           <Text style={styles.meta}>{story.date} • {story.location}</Text>
+          
+          {story.albumShareUrl && (
+            <TouchableOpacity 
+              style={styles.photoButton}
+              onPress={() => Linking.openURL(story.albumShareUrl!)}
+            >
+              <Feather name="image" size={20} color={colors.white} />
+              <Text style={styles.photoButtonText}>
+                View Photos ({story.mediaItemIds?.length || 0})
+              </Text>
+            </TouchableOpacity>
+          )}
+          
           <Text style={styles.content}>{story.content}</Text>
         </ScrollView>
       </SafeAreaView>
@@ -133,6 +146,21 @@ const styles = StyleSheet.create({
     color: colors.text,
     opacity: 0.6,
     marginBottom: 24,
+  },
+  photoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 24,
+  },
+  photoButtonText: {
+    color: colors.white,
+    fontFamily: typography.fonts.ui,
+    fontSize: 14,
   },
   content: {
     fontFamily: typography.fonts.body,

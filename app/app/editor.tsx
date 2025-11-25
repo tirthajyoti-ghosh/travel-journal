@@ -6,6 +6,7 @@ import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
+import { MediaPicker } from '@/components/MediaPicker';
 
 export default function EditorScreen() {
   const { storyId } = useLocalSearchParams<{ storyId?: string }>();
@@ -13,6 +14,9 @@ export default function EditorScreen() {
   const [content, setContent] = useState('');
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mediaItemIds, setMediaItemIds] = useState<string[]>([]);
+  const [albumId, setAlbumId] = useState<string | undefined>();
+  const [albumShareUrl, setAlbumShareUrl] = useState<string | undefined>();
 
   useEffect(() => {
     if (storyId) {
@@ -28,6 +32,9 @@ export default function EditorScreen() {
         setTitle(story.title);
         setContent(story.content);
         setLocation(story.location);
+        setMediaItemIds(story.mediaItemIds || []);
+        setAlbumId(story.albumId);
+        setAlbumShareUrl(story.albumShareUrl);
       }
     } catch (error) {
       console.error('Failed to load story:', error);
@@ -49,6 +56,9 @@ export default function EditorScreen() {
         content: content.trim(),
         location: location.trim() || 'Unknown Location',
         isDraft: true,
+        mediaItemIds,
+        albumId,
+        albumShareUrl,
       });
       router.back();
     } catch (error) {
@@ -57,6 +67,12 @@ export default function EditorScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMediaSelected = (items: string[], album: string, shareUrl: string) => {
+    setMediaItemIds(items);
+    setAlbumId(album);
+    setAlbumShareUrl(shareUrl);
   };
 
   return (
@@ -110,9 +126,12 @@ export default function EditorScreen() {
         </ScrollView>
 
         <View style={styles.toolbar}>
-          <TouchableOpacity style={styles.toolbarButton}>
-            <Feather name="image" size={24} color={colors.text} />
-          </TouchableOpacity>
+          <MediaPicker onMediaSelected={handleMediaSelected} />
+          {mediaItemIds.length > 0 && (
+            <Text style={styles.mediaCount}>
+              {mediaItemIds.length} {mediaItemIds.length === 1 ? 'photo' : 'photos'} selected
+            </Text>
+          )}
         </View>
       </SafeAreaView>
     </View>
@@ -187,6 +206,8 @@ const styles = StyleSheet.create({
   },
   toolbar: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderTopWidth: 1,
@@ -194,5 +215,11 @@ const styles = StyleSheet.create({
   },
   toolbarButton: {
     padding: 8,
+  },
+  mediaCount: {
+    fontFamily: typography.fonts.caption,
+    fontSize: 12,
+    color: colors.text,
+    opacity: 0.6,
   },
 });
