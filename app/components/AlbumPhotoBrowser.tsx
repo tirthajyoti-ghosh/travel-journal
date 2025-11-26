@@ -13,9 +13,10 @@ interface PhotoItem {
 interface AlbumPhotoBrowserProps {
   albumShareUrl: string;
   onClose: () => void;
+  onPhotoSelect?: (photoUrl: string) => void;
 }
 
-export function AlbumPhotoBrowser({albumShareUrl, onClose }: AlbumPhotoBrowserProps) {
+export function AlbumPhotoBrowser({albumShareUrl, onClose, onPhotoSelect }: AlbumPhotoBrowserProps) {
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,9 +156,10 @@ export function AlbumPhotoBrowser({albumShareUrl, onClose }: AlbumPhotoBrowserPr
     <TouchableOpacity 
       style={styles.photoItem}
       onPress={() => {
-        // Future: Could open full-size image viewer here
-        // For now, just log which item was tapped
-        console.log('Tapped photo:', item.id);
+        console.log('Photo tapped:', item.id);
+        if (onPhotoSelect) {
+          onPhotoSelect(item.url);
+        }
       }}
     >
       <Image

@@ -8,12 +8,13 @@ import { typography } from '@/theme/typography';
 
 interface MediaPickerProps {
   onMediaSelected: (albumShareUrl: string) => void;
+  onPhotoInsert?: (photoUrl: string) => void;
   initialAlbumUrl?: string;
 }
 
 const ALBUM_URL_KEY = '@travel_journal:google_photos_album_url';
 
-export function MediaPicker({ onMediaSelected, initialAlbumUrl }: MediaPickerProps) {
+export function MediaPicker({ onMediaSelected, onPhotoInsert, initialAlbumUrl }: MediaPickerProps) {
   const [albumUrl, setAlbumUrl] = useState<string>(initialAlbumUrl || '');
   const [inputUrl, setInputUrl] = useState<string>('');
   const [showBrowser, setShowBrowser] = useState(false);
@@ -82,6 +83,14 @@ export function MediaPicker({ onMediaSelected, initialAlbumUrl }: MediaPickerPro
     setShowBrowser(false);
   };
 
+  const handlePhotoSelect = (photoUrl: string) => {
+    if (onPhotoInsert) {
+      onPhotoInsert(photoUrl);
+    }
+    // Optionally close browser after inserting photo
+    // setShowBrowser(false);
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -144,6 +153,7 @@ export function MediaPicker({ onMediaSelected, initialAlbumUrl }: MediaPickerPro
           <AlbumPhotoBrowser
             albumShareUrl={albumUrl}
             onClose={handleCloseBrowser}
+            onPhotoSelect={handlePhotoSelect}
           />
         </Modal>
       )}
