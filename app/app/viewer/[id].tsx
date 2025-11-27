@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
+import { WebView } from 'react-native-webview';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
+import { getViewerHTML } from '@/theme/editorStyles';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
 import { Story } from '@/types';
@@ -13,6 +15,7 @@ export default function ViewerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
+  const [webViewHeight, setWebViewHeight] = useState(400);
 
   const loadStory = async () => {
     if (!id) return;
@@ -89,7 +92,26 @@ export default function ViewerScreen() {
             </TouchableOpacity>
           )}
           
-          <Text style={styles.content}>{story.content}</Text>
+          <View style={styles.contentContainer}>
+            <WebView
+              originWhitelist={['*']}
+              source={{ html: getViewerHTML(story.content) }}
+              style={[styles.webview, { height: webViewHeight }]}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
+              onMessage={(event) => {
+                try {
+                  const data = JSON.parse(event.nativeEvent.data);
+                  if (data.height) {
+                    setWebViewHeight(data.height + 20);
+                  }
+                } catch (e) {
+                  console.error('Error parsing WebView message:', e);
+                }
+              }}
+            />
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -160,10 +182,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.ui,
     fontSize: 14,
   },
-  content: {
-    fontFamily: typography.fonts.body,
-    fontSize: 18,
-    color: colors.text,
-    lineHeight: 28,
+  contentContainer: {
+    width: '100%',
+  },
+  webview: {
+    backgroundColor: 'transparent',
   },
 });

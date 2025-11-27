@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
+import { getEditorContentCSS } from '@/theme/editorStyles';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
 import { MediaPicker } from '@/components/MediaPicker';
@@ -27,62 +28,9 @@ export default function EditorScreen() {
   const [albumShareUrl, setAlbumShareUrl] = useState<string | undefined>();
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [editorReady, setEditorReady] = useState(false);
 
   const ALBUM_URL_KEY = '@travel_journal:google_photos_album_url';
-
-  // Custom CSS for cozy notebook aesthetic
-  const customEditorCSS = `
-    * {
-      font-family: 'Lora', serif;
-      color: ${colors.text};
-      font-size: 18px;
-      line-height: 1.6;
-    }
-    p {
-      margin: 0.5em 0;
-    }
-    h1, h2, h3 {
-      font-family: 'Lora', serif;
-      font-weight: 600;
-      margin: 0.8em 0 0.4em 0;
-    }
-    h1 {
-      font-size: 28px;
-    }
-    h2 {
-      font-size: 24px;
-    }
-    h3 {
-      font-size: 20px;
-    }
-    blockquote {
-      border-left: 3px solid ${colors.accent};
-      padding-left: 1rem;
-      margin: 1em 0;
-      font-style: italic;
-      opacity: 0.9;
-    }
-    ul, ol {
-      padding-left: 1.5em;
-      margin: 0.5em 0;
-    }
-    li {
-      margin: 0.3em 0;
-    }
-    strong {
-      font-weight: 600;
-    }
-    em {
-      font-style: italic;
-    }
-    img {
-      max-width: 100%;
-      height: auto;
-      margin: 1em 0;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-  `;
 
   const editor = useEditorBridge({
     autofocus: false,
@@ -90,7 +38,7 @@ export default function EditorScreen() {
     initialContent: '',
     bridgeExtensions: [
       ...TenTapStartKit,
-      CoreBridge.configureCSS(customEditorCSS),
+      CoreBridge.configureCSS(getEditorContentCSS()),
     ],
     theme: {
       toolbar: {
@@ -136,6 +84,13 @@ export default function EditorScreen() {
       keyboardWillHide.remove();
     };
   }, [storyId]);
+
+  // Load story content when editor is ready
+  useEffect(() => {
+    if (editorReady && storyId) {
+      loadStory();
+    }
+  }, [editorReady, storyId]);
 
   const loadStoredAlbumUrl = async () => {
     try {
@@ -261,6 +216,7 @@ export default function EditorScreen() {
           <View style={styles.editorWrapper}>
             <RichText
               editor={editor}
+              onLoad={() => setEditorReady(true)}
             />
           </View>
         </View>
