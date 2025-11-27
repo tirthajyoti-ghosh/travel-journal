@@ -86,7 +86,7 @@ export default function EditorScreen() {
 
   const editor = useEditorBridge({
     autofocus: false,
-    avoidIosKeyboard: true,
+    avoidIosKeyboard: false,
     initialContent: '',
     bridgeExtensions: [
       ...TenTapStartKit,
@@ -235,7 +235,7 @@ export default function EditorScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContentContainer}>
+        <View style={styles.contentWrapper}>
           <TextInput
             style={styles.titleInput}
             placeholder="Story Title..."
@@ -259,11 +259,11 @@ export default function EditorScreen() {
           </View>
 
           <View style={styles.editorWrapper}>
-            <RichText 
+            <RichText
               editor={editor}
             />
           </View>
-        </ScrollView>
+        </View>
 
         <View style={[styles.toolbarWrapper, { marginBottom: keyboardHeight }]}>
           <View style={styles.toolbarContainer}>
@@ -348,12 +348,9 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
-  scrollContent: {
+  contentWrapper: {
     flex: 1,
     paddingHorizontal: 20,
-  },
-  scrollContentContainer: {
-    flexGrow: 1,
   },
   titleInput: {
     fontFamily: typography.fonts.display,
@@ -387,8 +384,7 @@ const styles = StyleSheet.create({
     minHeight: 300,
   },
   editorWrapper: {
-    minHeight: 600,
-    maxHeight: 600,
+    flex: 1,
   },
   toolbarWrapper: {
     backgroundColor: colors.background,
