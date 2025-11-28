@@ -57,14 +57,12 @@ export const isGitHubConfigured = async (): Promise<boolean> => {
 
 /**
  * Generate markdown filename from story
- * Format: YYYY-MM-DD-HH-mm-ss.md
+ * Format: <epoch-timestamp>.md (e.g. 1732856959000.md)
+ * Uses UTC epoch time to be timezone independent
  */
 const generateFilename = (story: Story): string => {
-  // Use timestamp for filename to avoid issues with changing titles/locations
-  return new Date(story.date).toISOString()
-    .replace(/\.\d+Z$/, '') // Remove milliseconds and Z
-    .replace(/[:T]/g, '-')  // Replace colons and T with dashes
-    + '.md';
+  const timestamp = new Date(story.date).getTime();
+  return `${timestamp}.md`;
 };
 
 /**
