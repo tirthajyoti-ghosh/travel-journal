@@ -6,13 +6,18 @@ import { colors } from './colors';
  */
 export const getEditorContentCSS = () => `
   * {
-    font-family: 'Lora', serif;
+    font-family: 'Lora', Georgia, serif;
     color: ${colors.text};
     font-size: 18px;
     line-height: 1.6;
   }
   p {
     margin: 0.5em 0;
+    min-height: 1.6em; /* Ensure empty paragraphs have height */
+  }
+  p:empty::before {
+    content: '\\200B'; /* Zero-width space to give empty paragraphs height */
+    display: inline-block;
   }
   h1, h2, h3 {
     font-family: 'Lora', serif;
@@ -66,6 +71,9 @@ export const getViewerHTML = (content: string) => `
   <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
       <style>
         * {
           margin: 0;

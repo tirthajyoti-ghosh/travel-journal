@@ -7,6 +7,8 @@ import { typography } from '@/theme/typography';
 import { getEditorContentCSS } from '@/theme/editorStyles';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
+import * as githubService from '@/services/githubService';
+import { Story } from '@/types';
 import { MediaPicker } from '@/components/MediaPicker';
 import { AlbumPhotoBrowser } from '@/components/AlbumPhotoBrowser';
 import { DottedBackground } from '@/components/DottedBackground';
@@ -29,6 +31,8 @@ export default function EditorScreen() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [editorReady, setEditorReady] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [loadedStory, setLoadedStory] = useState<Story | null>(null);
 
   const ALBUM_URL_KEY = '@travel_journal:google_photos_album_url';
 
@@ -108,6 +112,7 @@ export default function EditorScreen() {
     try {
       const story = await storageService.getStory(storyId);
       if (story) {
+        setLoadedStory(story);
         setTitle(story.title);
         setLocation(story.location);
         setAlbumShareUrl(story.albumShareUrl);
@@ -125,6 +130,11 @@ export default function EditorScreen() {
   const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert('Missing Title', 'Please add a title to your story');
+      return;
+    }
+
+    if (!location.trim()) {
+      Alert.alert('Missing Location', 'Please add a location to your story');
       return;
     }
 
@@ -147,6 +157,81 @@ export default function EditorScreen() {
       Alert.alert('Error', 'Failed to save story. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (publishing) return;
+
+    if (!title.trim()) {
+      Alert.alert('Missing Title', 'Please add a title to your story');
+      return;
+    }
+
+    if (!location.trim()) {
+      Alert.alert('Missing Location', 'Please add a location to your story');
+      return;
+    }
+
+    // Check if GitHub is configured
+    const isConfigured = await githubService.isGitHubConfigured();
+    if (!isConfigured) {
+      Alert.alert(
+        'GitHub Not Configured',
+        'Please configure your GitHub settings first.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Settings', onPress: () => router.push('/settings') },
+        ]
+      );
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      // Get HTML content from editor
+      const content = await editor.getHTML();
+      
+      // Create story object, preserving existing metadata if editing
+      const story: Story = {
+        ...loadedStory, // Merge existing story data (includes isPublished, publishedAt, githubPath)
+        id: storyId || Date.now().toString(),
+        title: title.trim(),
+        content: content,
+        location: location.trim() || 'Unknown Location',
+        date: loadedStory?.date || new Date().toISOString(),
+        isDraft: false,
+        albumShareUrl,
+        images: [],
+        createdAt: loadedStory?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Publish to GitHub
+      const result = await githubService.publishStory(story);
+      
+      if (result.success) {
+        // Save story with published status
+        await storageService.saveStory({
+          ...story,
+          isPublished: true,
+          publishedAt: new Date().toISOString(),
+          githubPath: result.path,
+        });
+        
+        Alert.alert(
+          'Published!',
+          'Your story has been published to GitHub ✓',
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+      } else {
+        Alert.alert('Publish Failed', result.error || 'Unknown error occurred');
+      }
+    } catch (error) {
+      console.error('Failed to publish story:', error);
+      Alert.alert('Error', 'Failed to publish story. Please try again.');
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -181,13 +266,23 @@ export default function EditorScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
-            onPress={handleSave}
-            disabled={loading}
-          >
-            <Text style={styles.saveText}>{loading ? 'Saving...' : 'Save'}</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
+              onPress={handleSave}
+              disabled={loading || publishing}
+            >
+              <Text style={styles.saveText}>{loading ? 'Saving...' : 'Save Draft'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.publishButton, publishing && styles.saveButtonDisabled]} 
+              onPress={handlePublish}
+              disabled={loading || publishing}
+            >
+              <Feather name="upload-cloud" size={16} color={colors.white} />
+              <Text style={styles.publishText}>{publishing ? 'Publishing...' : 'Publish'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.contentWrapper}>
@@ -287,7 +382,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   saveButton: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  publishButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.accent,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -297,6 +407,11 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   saveText: {
+    color: colors.accent,
+    fontFamily: typography.fonts.ui,
+    fontSize: 14,
+  },
+  publishText: {
     color: colors.white,
     fontFamily: typography.fonts.ui,
     fontSize: 14,

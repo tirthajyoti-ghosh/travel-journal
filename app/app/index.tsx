@@ -61,6 +61,12 @@ export default function HomeScreen() {
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Your Travel Stories</Text>
+            <TouchableOpacity 
+              style={styles.settingsButton}
+              onPress={() => router.push('/settings')}
+            >
+              <Feather name="settings" size={24} color={colors.text} />
+            </TouchableOpacity>
           </View>
           
           <FlatList
@@ -102,6 +108,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 20,
     marginBottom: 10,
   },
@@ -109,6 +118,9 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.display,
     fontSize: 36,
     color: colors.text,
+  },
+  settingsButton: {
+    padding: 8,
   },
   listContent: {
     paddingBottom: 100,
