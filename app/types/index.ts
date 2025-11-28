@@ -13,6 +13,8 @@ export interface Story {
   isPublished?: boolean;
   publishedAt?: string;
   githubPath?: string;
+  archived?: boolean;
+  archivedAt?: string;
 }
 
 export interface GitHubConfig {

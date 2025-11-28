@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, Alert, ActionSheetIOS, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
@@ -7,8 +7,11 @@ import { WebView } from 'react-native-webview';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import { getViewerHTML } from '@/theme/editorStyles';
+import { useNetworkStatus } from '@/hooks/use-network-status';
+import { EmptyState } from '@/components/EmptyState';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
+import * as githubService from '@/services/githubService';
 import { Story } from '@/types';
 
 export default function ViewerScreen() {
@@ -16,6 +19,7 @@ export default function ViewerScreen() {
   const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
   const [webViewHeight, setWebViewHeight] = useState(400);
+  const { isOffline } = useNetworkStatus();
 
   const loadStory = async () => {
     if (!id) return;
@@ -36,6 +40,118 @@ export default function ViewerScreen() {
       loadStory();
     }, [id])
   );
+
+  const handleDeleteStory = async () => {
+    if (!story) return;
+
+    if (story.isPublished && !story.isDraft) {
+      // Published story - archive on GitHub if online
+      if (isOffline) {
+        Alert.alert(
+          'Offline',
+          'You need to be online to archive published stories.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      Alert.alert(
+        'Archive Story',
+        'This will mark the story as archived on GitHub. Continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Archive', 
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const result = await githubService.archiveStory(story);
+                if (result.success) {
+                  // Update local storage
+                  const updatedStory = {
+                    ...story,
+                    archived: true,
+                    archivedAt: new Date().toISOString(),
+                  };
+                  await storageService.saveStory(updatedStory);
+                  router.back();
+                  Alert.alert('Success', 'Story archived successfully');
+                } else {
+                  Alert.alert('Error', result.error || 'Failed to archive story');
+                }
+              } catch (error) {
+                Alert.alert('Error', 'Failed to archive story');
+                console.error('Archive error:', error);
+              }
+            }
+          }
+        ]
+      );
+    } else {
+      // Draft - simple local deletion
+      Alert.alert(
+        'Delete Draft',
+        'This will permanently delete this draft. Continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await storageService.deleteStory(story.id);
+                router.back();
+              } catch (error) {
+                Alert.alert('Error', 'Failed to delete draft');
+                console.error('Delete error:', error);
+              }
+            }
+          }
+        ]
+      );
+    }
+  };
+
+  const handleMenuPress = () => {
+    if (!story) return;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Edit', story.isPublished && !story.isDraft ? 'Archive' : 'Delete'],
+          destructiveButtonIndex: 2,
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            // Edit
+            router.push({ pathname: '/editor', params: { storyId: id } });
+          } else if (buttonIndex === 2) {
+            // Delete/Archive
+            handleDeleteStory();
+          }
+        }
+      );
+    } else {
+      // Android fallback with Alert
+      Alert.alert(
+        story.title,
+        'What would you like to do?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Edit', 
+            onPress: () => router.push({ pathname: '/editor', params: { storyId: id } })
+          },
+          { 
+            text: story.isPublished && !story.isDraft ? 'Archive' : 'Delete',
+            style: 'destructive',
+            onPress: handleDeleteStory
+          }
+        ]
+      );
+    }
+  };
 
   if (loading) {
     return (
@@ -59,7 +175,14 @@ export default function ViewerScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Story not found</Text>
+            <EmptyState
+              icon={require('@/assets/doodles/Map.png')}
+              title="Story not found"
+              subtitle="This story may have been deleted"
+              actionLabel="Go Back"
+              onAction={() => router.back()}
+              iconSize={120}
+            />
           </View>
         </SafeAreaView>
       </View>
@@ -73,8 +196,8 @@ export default function ViewerScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push({ pathname: '/editor', params: { storyId: id } })}>
-            <Feather name="edit-2" size={24} color={colors.text} />
+          <TouchableOpacity onPress={handleMenuPress}>
+            <Feather name="more-vertical" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
 

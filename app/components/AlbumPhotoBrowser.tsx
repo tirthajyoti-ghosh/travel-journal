@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndi
 import Feather from '@expo/vector-icons/Feather';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
+import { EmptyState } from '@/components/EmptyState';
 
 interface PhotoItem {
   id: string;
@@ -177,18 +178,14 @@ export function AlbumPhotoBrowser({albumShareUrl, onClose, onPhotoSelect }: Albu
 
     return (
       <View style={styles.emptyContainer}>
-        <Feather name="image" size={48} color={colors.text + '40'} />
-        <Text style={styles.emptyText}>
-          {error || 'No photos found in album'}
-        </Text>
-        <Text style={styles.emptySubtext}>
-          Note: Google Photos may use JavaScript to load images, which limits scraping. 
-          Videos will appear as static thumbnails. Open the album in Google Photos to view full content.
-        </Text>
-        <TouchableOpacity style={styles.openButton} onPress={handleOpenInGooglePhotos}>
-          <Feather name="external-link" size={16} color={colors.white} />
-          <Text style={styles.openButtonText}>Open in Google Photos</Text>
-        </TouchableOpacity>
+        <EmptyState
+          icon={require('@/assets/doodles/Sailboat.png')}
+          title={error || 'No photos found'}
+          subtitle="Google Photos may use JavaScript to load images. Open the album directly to view all content."
+          actionLabel="Open in Google Photos"
+          onAction={handleOpenInGooglePhotos}
+          iconSize={100}
+        />
       </View>
     );
   };

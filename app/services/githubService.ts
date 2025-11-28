@@ -119,6 +119,7 @@ const generateMarkdown = (story: Story): string => {
 title: "${story.title}"
 date: "${story.date}"
 location: "${story.location}"
+${story.archived ? `archived: true\narchivedAt: "${story.archivedAt || new Date().toISOString()}"` : ''}
 ${story.albumShareUrl ? `media:\n  - "${story.albumShareUrl}"` : ''}
 ---
 
@@ -282,5 +283,96 @@ export const testGitHubConnection = async (config: GitHubConfig): Promise<boolea
   } catch (error) {
     console.error('GitHub connection test failed:', error);
     return false;
+  }
+};
+
+/**
+ * Archive a published story on GitHub
+ * Updates the frontmatter to set archived: true
+ */
+export const archiveStory = async (story: Story): Promise<PublishResult> => {
+  try {
+    const config = await loadGitHubConfig();
+    
+    if (!config) {
+      return {
+        success: false,
+        error: 'GitHub not configured',
+      };
+    }
+
+    if (!story.githubPath || !story.isPublished) {
+      return {
+        success: false,
+        error: 'Story is not published or has no GitHub path',
+      };
+    }
+
+    // Override branch based on environment
+    const targetBranch = getTargetBranch();
+    const activeConfig = { ...config, branch: targetBranch };
+
+    // Get existing file SHA (required for updates)
+    const existingSha = await getFileSha(activeConfig, story.githubPath);
+    
+    if (!existingSha) {
+      return {
+        success: false,
+        error: 'Could not find existing file on GitHub',
+      };
+    }
+
+    // Update story with archive metadata
+    const archivedStory: Story = {
+      ...story,
+      archived: true,
+      archivedAt: new Date().toISOString(),
+    };
+
+    // Generate updated markdown with archived frontmatter
+    const content = generateMarkdown(archivedStory);
+    const encodedContent = btoa(unescape(encodeURIComponent(content)));
+
+    // Update file on GitHub
+    const response = await fetch(
+      `https://api.github.com/repos/${activeConfig.owner}/${activeConfig.repo}/contents/${story.githubPath}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${activeConfig.token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `Archive story: ${story.title}`,
+          content: encodedContent,
+          branch: activeConfig.branch,
+          sha: existingSha,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('GitHub API Error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to archive on GitHub',
+      };
+    }
+
+    const result = await response.json();
+
+    return {
+      success: true,
+      path: story.githubPath,
+      url: result.content?.html_url,
+    };
+  } catch (error) {
+    console.error('Archive error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
   }
 };

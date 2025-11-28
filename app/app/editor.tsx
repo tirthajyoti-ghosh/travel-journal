@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, KeyboardAvoidingView, Platform, Modal, Keyboard } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, KeyboardAvoidingView, Platform, Modal, Keyboard, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
+import { getEditorContentCSS } from '@/theme/editorStyles';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
 import * as githubService from '@/services/githubService';
@@ -11,12 +12,15 @@ import { Story } from '@/types';
 import { MediaPicker } from '@/components/MediaPicker';
 import { AlbumPhotoBrowser } from '@/components/AlbumPhotoBrowser';
 import { DottedBackground } from '@/components/DottedBackground';
+import { useNetworkStatus } from '@/hooks/use-network-status';
+import { useLocation } from '@/hooks/use-location';
 import { 
   RichText, 
   Toolbar, 
   useEditorBridge, 
   TenTapStartKit,
   CoreBridge,
+  PlaceholderBridge,
   DEFAULT_TOOLBAR_ITEMS,
   type ToolbarItem,
 } from '@10play/tentap-editor';
@@ -32,62 +36,10 @@ export default function EditorScreen() {
   const [editorReady, setEditorReady] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [loadedStory, setLoadedStory] = useState<Story | null>(null);
+  const { isOffline } = useNetworkStatus();
+  const { location: detectedLocation, loading: detectingLocation, error: locationError, detectLocation } = useLocation();
 
   const ALBUM_URL_KEY = '@travel_journal:google_photos_album_url';
-
-  // Custom CSS for cozy notebook aesthetic
-  const customEditorCSS = `
-    * {
-      font-family: 'Lora', serif;
-      color: ${colors.text};
-      font-size: 18px;
-      line-height: 1.6;
-    }
-    p {
-      margin: 0.5em 0;
-    }
-    h1, h2, h3 {
-      font-family: 'Lora', serif;
-      font-weight: 600;
-      margin: 0.8em 0 0.4em 0;
-    }
-    h1 {
-      font-size: 28px;
-    }
-    h2 {
-      font-size: 24px;
-    }
-    h3 {
-      font-size: 20px;
-    }
-    blockquote {
-      border-left: 3px solid ${colors.accent};
-      padding-left: 1rem;
-      margin: 1em 0;
-      font-style: italic;
-      opacity: 0.9;
-    }
-    ul, ol {
-      padding-left: 1.5em;
-      margin: 0.5em 0;
-    }
-    li {
-      margin: 0.3em 0;
-    }
-    strong {
-      font-weight: 600;
-    }
-    em {
-      font-style: italic;
-    }
-    img {
-      max-width: 100%;
-      height: auto;
-      margin: 1em 0;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-  `;
 
   const editor = useEditorBridge({
     autofocus: false,
@@ -95,7 +47,10 @@ export default function EditorScreen() {
     initialContent: '',
     bridgeExtensions: [
       ...TenTapStartKit,
-      CoreBridge.configureCSS(customEditorCSS),
+      CoreBridge.configureCSS(getEditorContentCSS()),
+      PlaceholderBridge.configureExtension({
+        placeholder: 'Write something...',
+      }),
     ],
     theme: {
       toolbar: {
@@ -125,6 +80,8 @@ export default function EditorScreen() {
       loadStory();
     } else {
       loadStoredAlbumUrl();
+      // Don't auto-detect on mount to avoid permission prompts
+      // User can manually trigger detection with the button
     }
 
     const keyboardWillShow = Keyboard.addListener(
@@ -141,6 +98,13 @@ export default function EditorScreen() {
       keyboardWillHide.remove();
     };
   }, [storyId]);
+
+  // Update location field when detection completes
+  useEffect(() => {
+    if (detectedLocation && !location) {
+      setLocation(detectedLocation);
+    }
+  }, [detectedLocation]);
 
   // Load story content when editor is ready
   useEffect(() => {
@@ -214,15 +178,20 @@ export default function EditorScreen() {
   };
 
   const handlePublish = async () => {
-    if (publishing) return;
-
     if (!title.trim()) {
       Alert.alert('Missing Title', 'Please add a title to your story');
       return;
     }
 
-    if (!location.trim()) {
-      Alert.alert('Missing Location', 'Please add a location to your story');
+    // Check network status first
+    if (isOffline) {
+      Alert.alert(
+        'No Internet Connection',
+        'Story saved as draft. Connect to internet to publish to GitHub.',
+        [{ text: 'OK' }]
+      );
+      // Save as draft instead
+      await handleSave();
       return;
     }
 
@@ -319,6 +288,15 @@ export default function EditorScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
+          
+          {/* Offline status indicator */}
+          {isOffline && (
+            <View style={styles.offlineStatus}>
+              <View style={styles.offlineDot} />
+              <Text style={styles.offlineText}>Offline</Text>
+            </View>
+          )}
+          
           <View style={styles.headerActions}>
             <TouchableOpacity 
               style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
@@ -328,12 +306,24 @@ export default function EditorScreen() {
               <Text style={styles.saveText}>{loading ? 'Saving...' : 'Save Draft'}</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.publishButton, publishing && styles.saveButtonDisabled]} 
+              style={[
+                styles.publishButton, 
+                (publishing || isOffline) && styles.publishButtonDisabled
+              ]} 
               onPress={handlePublish}
-              disabled={loading || publishing}
+              disabled={loading || publishing || isOffline}
             >
-              <Feather name="upload-cloud" size={16} color={colors.white} />
-              <Text style={styles.publishText}>{publishing ? 'Publishing...' : 'Publish'}</Text>
+              <Feather 
+                name={isOffline ? "wifi-off" : "upload-cloud"} 
+                size={16} 
+                color={isOffline ? colors.text : colors.white} 
+              />
+              <Text style={[
+                styles.publishText,
+                isOffline && styles.publishTextDisabled
+              ]}>
+                {isOffline ? 'Offline' : publishing ? 'Publishing...' : 'Publish'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -349,13 +339,29 @@ export default function EditorScreen() {
           />
           
           <View style={styles.metaContainer}>
-            <TextInput
-              style={styles.metaInput}
-              placeholder="Location (e.g., Bangkok, Thailand)"
-              placeholderTextColor={colors.lines}
-              value={location}
-              onChangeText={setLocation}
-            />
+            <View style={styles.locationInputContainer}>
+              <TextInput
+                style={[styles.metaInput, styles.locationInput]}
+                placeholder="Location (e.g., Bangkok, Thailand)"
+                placeholderTextColor={colors.lines}
+                value={location}
+                onChangeText={setLocation}
+              />
+              <TouchableOpacity 
+                style={styles.detectButton}
+                onPress={detectLocation}
+                disabled={detectingLocation}
+              >
+                {detectingLocation ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <Feather name="map-pin" size={18} color={colors.accent} />
+                )}
+              </TouchableOpacity>
+            </View>
+            {locationError && (
+              <Text style={styles.locationError}>{locationError}</Text>
+            )}
             <Text style={styles.metaText}>
               {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </Text>
@@ -435,6 +441,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
+  offlineStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: colors.lines + '40',
+    borderRadius: 12,
+  },
+  offlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.text,
+    opacity: 0.5,
+  },
+  offlineText: {
+    fontFamily: typography.fonts.ui,
+    fontSize: 12,
+    color: colors.text,
+    opacity: 0.6,
+  },
   headerActions: {
     flexDirection: 'row',
     gap: 8,
@@ -456,6 +485,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
+  publishButtonDisabled: {
+    backgroundColor: colors.lines,
+    opacity: 0.5,
+  },
   saveButtonDisabled: {
     opacity: 0.5,
   },
@@ -468,6 +501,9 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: typography.fonts.ui,
     fontSize: 14,
+  },
+  publishTextDisabled: {
+    color: colors.text,
   },
   keyboardAvoid: {
     flex: 1,
@@ -485,6 +521,30 @@ const styles = StyleSheet.create({
   metaContainer: {
     marginBottom: 24,
     gap: 8,
+  },
+  locationInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  locationInput: {
+    flex: 1,
+  },
+  detectButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    backgroundColor: colors.accent + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  locationError: {
+    fontFamily: typography.fonts.caption,
+    fontSize: 12,
+    color: '#E74C3C',
+    marginTop: -4,
   },
   metaInput: {
     fontFamily: typography.fonts.caption,
