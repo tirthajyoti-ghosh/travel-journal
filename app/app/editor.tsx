@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
-import { getEditorContentCSS } from '@/theme/editorStyles';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
 import * as githubService from '@/services/githubService';
@@ -20,7 +19,6 @@ import {
   useEditorBridge, 
   TenTapStartKit,
   CoreBridge,
-  PlaceholderBridge,
   DEFAULT_TOOLBAR_ITEMS,
   type ToolbarItem,
 } from '@10play/tentap-editor';
@@ -41,16 +39,67 @@ export default function EditorScreen() {
 
   const ALBUM_URL_KEY = '@travel_journal:google_photos_album_url';
 
+  // Custom CSS for cozy notebook aesthetic
+  const customEditorCSS = `
+    * {
+      font-family: 'Lora', serif;
+      color: ${colors.text};
+      font-size: 18px;
+      line-height: 1.6;
+    }
+    p {
+      margin: 0.5em 0;
+    }
+    h1, h2, h3 {
+      font-family: 'Lora', serif;
+      font-weight: 600;
+      margin: 0.8em 0 0.4em 0;
+    }
+    h1 {
+      font-size: 28px;
+    }
+    h2 {
+      font-size: 24px;
+    }
+    h3 {
+      font-size: 20px;
+    }
+    blockquote {
+      border-left: 3px solid ${colors.accent};
+      padding-left: 1rem;
+      margin: 1em 0;
+      font-style: italic;
+      opacity: 0.9;
+    }
+    ul, ol {
+      padding-left: 1.5em;
+      margin: 0.5em 0;
+    }
+    li {
+      margin: 0.3em 0;
+    }
+    strong {
+      font-weight: 600;
+    }
+    em {
+      font-style: italic;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      margin: 1em 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+  `;
+
   const editor = useEditorBridge({
     autofocus: false,
     avoidIosKeyboard: false,
     initialContent: '',
     bridgeExtensions: [
       ...TenTapStartKit,
-      CoreBridge.configureCSS(getEditorContentCSS()),
-      PlaceholderBridge.configureExtension({
-        placeholder: 'Write something...',
-      }),
+      CoreBridge.configureCSS(customEditorCSS),
     ],
     theme: {
       toolbar: {
@@ -289,42 +338,43 @@ export default function EditorScreen() {
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           
-          {/* Offline status indicator */}
-          {isOffline && (
-            <View style={styles.offlineStatus}>
-              <View style={styles.offlineDot} />
-              <Text style={styles.offlineText}>Offline</Text>
-            </View>
-          )}
-          
           <View style={styles.headerActions}>
-            <TouchableOpacity 
-              style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
-              onPress={handleSave}
-              disabled={loading || publishing}
-            >
-              <Text style={styles.saveText}>{loading ? 'Saving...' : 'Save Draft'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[
-                styles.publishButton, 
-                (publishing || isOffline) && styles.publishButtonDisabled
-              ]} 
-              onPress={handlePublish}
-              disabled={loading || publishing || isOffline}
-            >
-              <Feather 
-                name={isOffline ? "wifi-off" : "upload-cloud"} 
-                size={16} 
-                color={isOffline ? colors.text : colors.white} 
-              />
-              <Text style={[
-                styles.publishText,
-                isOffline && styles.publishTextDisabled
-              ]}>
-                {isOffline ? 'Offline' : publishing ? 'Publishing...' : 'Publish'}
-              </Text>
-            </TouchableOpacity>
+            {isOffline ? (
+              <TouchableOpacity 
+                style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
+                onPress={handleSave}
+                disabled={loading}
+              >
+                <Text style={styles.saveText}>{loading ? 'Saving...' : 'Save Draft'}</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
+                  onPress={handleSave}
+                  disabled={loading || publishing}
+                >
+                  <Text style={styles.saveText}>{loading ? 'Saving...' : 'Save Draft'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[
+                    styles.publishButton, 
+                    publishing && styles.publishButtonDisabled
+                  ]} 
+                  onPress={handlePublish}
+                  disabled={loading || publishing}
+                >
+                  <Feather 
+                    name="upload-cloud" 
+                    size={16} 
+                    color={colors.white} 
+                  />
+                  <Text style={styles.publishText}>
+                    {publishing ? 'Publishing...' : 'Publish'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
