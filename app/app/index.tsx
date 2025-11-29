@@ -21,11 +21,21 @@ export default function HomeScreen() {
       const loadedStories = await storageService.getStories();
       // Filter out archived stories
       const visible = loadedStories.filter(s => !s.archived);
-      // Sort by updatedAt descending (newest first)
-      const sorted = visible.sort((a, b) => 
+      
+      // Separate drafts and published
+      const drafts = visible.filter(s => s.isDraft || !s.isPublished);
+      const published = visible.filter(s => !s.isDraft && s.isPublished);
+      
+      // Sort each group by updatedAt descending (newest first)
+      const sortedDrafts = drafts.sort((a, b) => 
         new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()
       );
-      setStories(sorted);
+      const sortedPublished = published.sort((a, b) => 
+        new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()
+      );
+      
+      // Combine: drafts first, then published
+      setStories([...sortedDrafts, ...sortedPublished]);
     } catch (error) {
       console.error('Failed to load stories:', error);
     } finally {
@@ -77,19 +87,37 @@ export default function HomeScreen() {
           <FlatList
             data={stories}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <StoryCard 
-                story={item} 
-                onPress={() => {
-                  // Drafts go to editor, published go to viewer
-                  if (item.isDraft) {
-                    router.push({ pathname: '/editor', params: { storyId: item.id }});
-                  } else {
-                    router.push(`/viewer/${item.id}`);
-                  }
-                }}
-              />
-            )}
+            renderItem={({ item, index }) => {
+              const isDraft = item.isDraft || !item.isPublished;
+              const prevItem = index > 0 ? stories[index - 1] : null;
+              const prevIsDraft = prevItem ? (prevItem.isDraft || !prevItem.isPublished) : true;
+              
+              // Show divider when transitioning from drafts to published
+              const showDivider = prevItem && prevIsDraft && !isDraft;
+              
+              return (
+                <>
+                  {showDivider && (
+                    <View style={styles.divider}>
+                      <View style={styles.dividerLine} />
+                      <Text style={styles.dividerText}>Published Stories</Text>
+                      <View style={styles.dividerLine} />
+                    </View>
+                  )}
+                  <StoryCard 
+                    story={item} 
+                    onPress={() => {
+                      // Drafts go to editor, published go to viewer
+                      if (item.isDraft) {
+                        router.push({ pathname: '/editor', params: { storyId: item.id }});
+                      } else {
+                        router.push(`/viewer/${item.id}`);
+                      }
+                    }}
+                  />
+                </>
+              );
+            }}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={renderEmptyState}
           />
@@ -136,6 +164,26 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 100,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.lines,
+    opacity: 0.5,
+  },
+  dividerText: {
+    fontFamily: typography.fonts.caption,
+    fontSize: 12,
+    color: colors.text,
+    opacity: 0.6,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   loadingContainer: {
     flex: 1,
