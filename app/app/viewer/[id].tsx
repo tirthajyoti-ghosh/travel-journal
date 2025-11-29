@@ -112,47 +112,6 @@ export default function ViewerScreen() {
     }
   };
 
-  const handleMenuPress = () => {
-    if (!story) return;
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', 'Edit', story.isPublished && !story.isDraft ? 'Archive' : 'Delete'],
-          destructiveButtonIndex: 2,
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            // Edit
-            router.push({ pathname: '/editor', params: { storyId: id } });
-          } else if (buttonIndex === 2) {
-            // Delete/Archive
-            handleDeleteStory();
-          }
-        }
-      );
-    } else {
-      // Android fallback with Alert
-      Alert.alert(
-        story.title,
-        'What would you like to do?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Edit', 
-            onPress: () => router.push({ pathname: '/editor', params: { storyId: id } })
-          },
-          { 
-            text: story.isPublished && !story.isDraft ? 'Archive' : 'Delete',
-            style: 'destructive',
-            onPress: handleDeleteStory
-          }
-        ]
-      );
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.container}>
@@ -196,8 +155,8 @@ export default function ViewerScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleMenuPress}>
-            <Feather name="more-vertical" size={24} color={colors.text} />
+          <TouchableOpacity onPress={handleDeleteStory}>
+            <Feather name="archive" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -236,6 +195,14 @@ export default function ViewerScreen() {
             />
           </View>
         </ScrollView>
+
+        {/* Edit FAB */}
+        <TouchableOpacity 
+          style={styles.fab}
+          onPress={() => router.push({ pathname: '/editor', params: { storyId: id } })}
+        >
+          <Feather name="edit-2" size={24} color={colors.white} />
+        </TouchableOpacity>
       </SafeAreaView>
     </View>
   );
@@ -304,6 +271,22 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: typography.fonts.ui,
     fontSize: 14,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   contentContainer: {
     width: '100%',

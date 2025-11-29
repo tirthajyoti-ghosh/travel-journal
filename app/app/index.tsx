@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, ActionSheetIOS, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
@@ -8,15 +8,12 @@ import { EmptyState } from '@/components/EmptyState';
 import { Story } from '@/types';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
-import { useNetworkStatus } from '@/hooks/use-network-status';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
-import * as githubService from '@/services/githubService';
 
 export default function HomeScreen() {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isOffline } = useNetworkStatus();
 
   const loadStories = async () => {
     setLoading(true);
@@ -42,124 +39,6 @@ export default function HomeScreen() {
       loadStories();
     }, [])
   );
-
-  const handleDeleteStory = async (story: Story) => {
-    if (story.isPublished && !story.isDraft) {
-      // Published story - archive on GitHub if online
-      if (isOffline) {
-        Alert.alert(
-          'Offline',
-          'You need to be online to archive published stories.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      Alert.alert(
-        'Archive Story',
-        'This will mark the story as archived on GitHub. Continue?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Archive', 
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                const result = await githubService.archiveStory(story);
-                if (result.success) {
-                  // Update local storage
-                  const updatedStory = {
-                    ...story,
-                    archived: true,
-                    archivedAt: new Date().toISOString(),
-                  };
-                  await storageService.saveStory(updatedStory);
-                  await loadStories();
-                  Alert.alert('Success', 'Story archived successfully');
-                } else {
-                  Alert.alert('Error', result.error || 'Failed to archive story');
-                }
-              } catch (error) {
-                Alert.alert('Error', 'Failed to archive story');
-                console.error('Archive error:', error);
-              }
-            }
-          }
-        ]
-      );
-    } else {
-      // Draft - simple local deletion
-      Alert.alert(
-        'Delete Draft',
-        'This will permanently delete this draft. Continue?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Delete', 
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await storageService.deleteStory(story.id);
-                await loadStories();
-              } catch (error) {
-                Alert.alert('Error', 'Failed to delete draft');
-                console.error('Delete error:', error);
-              }
-            }
-          }
-        ]
-      );
-    }
-  };
-
-  const handleLongPress = (story: Story) => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', 'Edit', story.isPublished && !story.isDraft ? 'Archive' : 'Delete'],
-          destructiveButtonIndex: 2,
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            // Edit
-            if (story.isDraft) {
-              router.push({ pathname: '/editor', params: { storyId: story.id }});
-            } else {
-              router.push(`/viewer/${story.id}`);
-            }
-          } else if (buttonIndex === 2) {
-            // Delete/Archive
-            handleDeleteStory(story);
-          }
-        }
-      );
-    } else {
-      // Android fallback with Alert
-      Alert.alert(
-        story.title,
-        'What would you like to do?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Edit', 
-            onPress: () => {
-              if (story.isDraft) {
-                router.push({ pathname: '/editor', params: { storyId: story.id }});
-              } else {
-                router.push(`/viewer/${story.id}`);
-              }
-            }
-          },
-          { 
-            text: story.isPublished && !story.isDraft ? 'Archive' : 'Delete',
-            style: 'destructive',
-            onPress: () => handleDeleteStory(story)
-          }
-        ]
-      );
-    }
-  };
 
   const renderEmptyState = () => (
     <EmptyState
@@ -209,7 +88,6 @@ export default function HomeScreen() {
                     router.push(`/viewer/${item.id}`);
                   }
                 }}
-                onLongPress={() => handleLongPress(item)}
               />
             )}
             contentContainerStyle={styles.listContent}
