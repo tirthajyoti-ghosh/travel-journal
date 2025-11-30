@@ -376,3 +376,216 @@ export const archiveStory = async (story: Story): Promise<PublishResult> => {
     };
   }
 };
+
+/**
+ * Unarchive a story on GitHub
+ * Updates the frontmatter to remove archived status
+ */
+export const unarchiveStory = async (story: Story): Promise<PublishResult> => {
+  try {
+    const config = await loadGitHubConfig();
+    
+    if (!config) {
+      return {
+        success: false,
+        error: 'GitHub not configured',
+      };
+    }
+
+    if (!story.githubPath || !story.isPublished) {
+      return {
+        success: false,
+        error: 'Story is not published or has no GitHub path',
+      };
+    }
+
+    // Override branch based on environment
+    const targetBranch = getTargetBranch();
+    const activeConfig = { ...config, branch: targetBranch };
+
+    // Get existing file SHA (required for updates)
+    const existingSha = await getFileSha(activeConfig, story.githubPath);
+    
+    if (!existingSha) {
+      return {
+        success: false,
+        error: 'Could not find existing file on GitHub',
+      };
+    }
+
+    // Update story to remove archive metadata
+    const unarchivedStory: Story = {
+      ...story,
+      archived: false,
+      archivedAt: undefined,
+    };
+
+    // Generate updated markdown (will exclude archived fields)
+    const content = generateMarkdown(unarchivedStory);
+    const encodedContent = btoa(unescape(encodeURIComponent(content)));
+
+    // Update file on GitHub
+    const response = await fetch(
+      `https://api.github.com/repos/${activeConfig.owner}/${activeConfig.repo}/contents/${story.githubPath}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${activeConfig.token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `Unarchive story: ${story.title}`,
+          content: encodedContent,
+          branch: activeConfig.branch,
+          sha: existingSha,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('GitHub API Error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to unarchive on GitHub',
+      };
+    }
+
+    const result = await response.json();
+
+    return {
+      success: true,
+      path: story.githubPath,
+      url: result.content?.html_url,
+    };
+  } catch (error) {
+    console.error('Unarchive error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+};
+
+/**
+ * Fetch all stories from GitHub
+ * Used for restoring cache
+ */
+export const fetchAllStories = async (): Promise<Story[]> => {
+  try {
+    const config = await loadGitHubConfig();
+    if (!config) return [];
+
+    const targetBranch = getTargetBranch();
+    const activeConfig = { ...config, branch: targetBranch };
+
+    // 1. List files in stories/ directory
+    const response = await fetch(
+      `https://api.github.com/repos/${activeConfig.owner}/${activeConfig.repo}/contents/stories?ref=${activeConfig.branch}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${activeConfig.token}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Failed to list stories:', await response.text());
+      return [];
+    }
+
+    const files = await response.json();
+    if (!Array.isArray(files)) return [];
+
+    const stories: Story[] = [];
+
+    // 2. Fetch content for each file
+    for (const file of files) {
+      if (file.name.endsWith('.md')) {
+        const contentResponse = await fetch(file.download_url);
+        if (contentResponse.ok) {
+          const content = await contentResponse.text();
+          const story = parseMarkdown(content, file.path);
+          if (story) {
+            stories.push(story);
+          }
+        }
+      }
+    }
+
+    return stories;
+  } catch (error) {
+    console.error('Error fetching stories:', error);
+    return [];
+  }
+};
+
+/**
+ * Parse markdown content into Story object
+ */
+const parseMarkdown = (content: string, path: string): Story | null => {
+  try {
+    const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
+    const match = content.match(frontmatterRegex);
+    
+    if (!match) return null;
+    
+    const [, frontmatter, body] = match;
+    const metadata: any = {};
+    
+    frontmatter.split('\n').forEach(line => {
+      const parts = line.split(':');
+      if (parts.length >= 2) {
+        const key = parts[0].trim();
+        let value = parts.slice(1).join(':').trim();
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.slice(1, -1);
+        }
+        metadata[key] = value;
+      }
+    });
+
+    // Handle media list specifically if needed, but simple parsing for now
+    // If media is a list, the above split might fail or capture just the first line
+    // A more robust parser would be better but this suffices for the generated format
+
+    // Convert markdown body back to HTML (simplified)
+    const htmlContent = body
+      .split('\n\n')
+      .map(p => p.trim())
+      .filter(p => p)
+      .map(p => {
+        if (p.startsWith('# ')) return `<h1>${p.slice(2)}</h1>`;
+        if (p.startsWith('## ')) return `<h2>${p.slice(3)}</h2>`;
+        if (p.startsWith('### ')) return `<h3>${p.slice(4)}</h3>`;
+        if (p.startsWith('- ')) return `<ul>${p.split('\n').map(li => `<li>${li.slice(2)}</li>`).join('')}</ul>`;
+        if (p.startsWith('> ')) return `<blockquote>${p.slice(2)}</blockquote>`;
+        return `<p>${p}</p>`;
+      })
+      .join('');
+
+    return {
+      id: path.replace('stories/', '').replace('.md', ''),
+      title: metadata.title || 'Untitled',
+      date: metadata.date || new Date().toISOString(),
+      location: metadata.location || '',
+      content: htmlContent,
+      images: [], 
+      albumShareUrl: metadata.media ? metadata.media.replace('- ', '').trim() : undefined,
+      isDraft: false,
+      isPublished: true,
+      publishedAt: metadata.date,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      githubPath: path,
+      archived: metadata.archived === 'true',
+      archivedAt: metadata.archivedAt,
+    };
+  } catch (error) {
+    console.error('Error parsing markdown:', error);
+    return null;
+  }
+};
+

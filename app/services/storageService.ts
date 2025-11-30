@@ -91,6 +91,30 @@ export async function deleteStory(id: string): Promise<void> {
 }
 
 /**
+ * Clear all stories (Danger Zone)
+ */
+export async function clearAllStories(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error('Error clearing stories:', error);
+    throw error;
+  }
+}
+
+/**
+ * Bulk save stories (for syncing from GitHub)
+ */
+export async function saveStories(stories: Story[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(stories));
+  } catch (error) {
+    console.error('Error saving stories:', error);
+    throw error;
+  }
+}
+
+/**
  * Generate a unique ID for stories
  */
 function generateId(): string {

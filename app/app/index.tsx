@@ -1,19 +1,24 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { StoryCard } from '@/components/StoryCard';
 import { EmptyState } from '@/components/EmptyState';
+import { StoryContextMenu } from '@/components/StoryContextMenu';
 import { Story } from '@/types';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
+import * as githubService from '@/services/githubService';
 
 export default function HomeScreen() {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
 
   const loadStories = async () => {
     setLoading(true);
@@ -49,6 +54,69 @@ export default function HomeScreen() {
       loadStories();
     }, [])
   );
+
+  const handleLongPress = (story: Story, event: any) => {
+    const { pageX, pageY } = event.nativeEvent;
+    setSelectedStory(story);
+    setMenuPosition({ x: pageX, y: pageY });
+    setMenuVisible(true);
+  };
+
+  const handleArchive = async (story: Story) => {
+    Alert.alert(
+      'Archive Story',
+      'This will remove the story from your main feed but keep it on GitHub. You can view it in Archived Stories.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Archive',
+          onPress: async () => {
+            try {
+              // 1. Update GitHub
+              const result = await githubService.archiveStory(story);
+              if (!result.success) {
+                Alert.alert('Error', result.error || 'Failed to archive on GitHub');
+                return;
+              }
+
+              // 2. Update local storage
+              await storageService.saveStory({
+                ...story,
+                archived: true,
+                archivedAt: new Date().toISOString(),
+              });
+
+              loadStories();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to archive story');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDelete = async (story: Story) => {
+    const isDraft = story.isDraft || !story.isPublished;
+    
+    Alert.alert(
+      isDraft ? 'Delete Draft' : 'Remove from Device',
+      isDraft 
+        ? 'This will permanently delete this draft. This action cannot be undone.'
+        : 'This will remove the story from this device only. It will remain on GitHub.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await storageService.deleteStory(story.id);
+            loadStories();
+          },
+        },
+      ]
+    );
+  };
 
   const renderEmptyState = () => (
     <EmptyState
@@ -114,6 +182,7 @@ export default function HomeScreen() {
                         router.push(`/viewer/${item.id}`);
                       }
                     }}
+                    onLongPress={(e) => handleLongPress(item, e)}
                   />
                 </>
               );
@@ -128,6 +197,18 @@ export default function HomeScreen() {
           >
             <Feather name="plus" size={32} color={colors.white} />
           </TouchableOpacity>
+
+          <StoryContextMenu
+            visible={menuVisible}
+            onClose={() => setMenuVisible(false)}
+            onEdit={() => {
+              if (selectedStory) router.push(`/editor?id=${selectedStory.id}`);
+            }}
+            onDelete={() => selectedStory && handleDelete(selectedStory)}
+            onArchive={() => selectedStory && handleArchive(selectedStory)}
+            isPublished={selectedStory ? (!selectedStory.isDraft && !!selectedStory.isPublished) : false}
+            position={menuPosition}
+          />
         </View>
       </SafeAreaView>
     </View>

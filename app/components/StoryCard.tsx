@@ -7,6 +7,7 @@ import { typography } from '@/theme/typography';
 interface StoryCardProps {
   story: Story;
   onPress: () => void;
+  onLongPress?: (event: any) => void;
 }
 
 function formatRelativeTime(dateString: string): string {
@@ -31,7 +32,7 @@ function formatDate(dateString: string): string {
   });
 }
 
-export function StoryCard({ story, onPress }: StoryCardProps) {
+export function StoryCard({ story, onPress, onLongPress }: StoryCardProps) {
   const isDraft = story.isDraft || !story.isPublished;
   
   return (
@@ -41,6 +42,7 @@ export function StoryCard({ story, onPress }: StoryCardProps) {
         isDraft ? styles.cardDraft : styles.cardPublished
       ]}
       onPress={onPress}
+      onLongPress={onLongPress}
       activeOpacity={0.7}
     >
       {/* Status Badge */}

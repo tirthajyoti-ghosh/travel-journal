@@ -7,4 +7,7 @@ export const colors = {
   polaroidFrame: '#FCFAF6',
   shadow: 'rgba(0,0,0,0.08)',
   white: '#FFFFFF',
+  error: '#E74C3C',
+  gray: '#95A5A6',
+  danger: '#CE6A52',  // softer terracotta
 };

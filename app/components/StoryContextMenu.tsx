@@ -9,7 +9,10 @@ interface StoryContextMenuProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onArchive?: () => void;
+  onUnarchive?: () => void;
   isPublished: boolean;
+  isArchived?: boolean;
   position?: { x: number; y: number };
 }
 
@@ -18,7 +21,10 @@ export function StoryContextMenu({
   onClose,
   onEdit,
   onDelete,
+  onArchive,
+  onUnarchive,
   isPublished,
+  isArchived,
   position,
 }: StoryContextMenuProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -90,6 +96,38 @@ export function StoryContextMenu({
 
               <View style={styles.separator} />
 
+              {isPublished && !isArchived && onArchive && (
+                <>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => {
+                      onArchive();
+                      onClose();
+                    }}
+                  >
+                    <Feather name="archive" size={20} color={colors.text} />
+                    <Text style={styles.menuItemText}>Archive</Text>
+                  </TouchableOpacity>
+                  <View style={styles.separator} />
+                </>
+              )}
+
+              {isArchived && onUnarchive && (
+                <>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => {
+                      onUnarchive();
+                      onClose();
+                    }}
+                  >
+                    <Feather name="refresh-ccw" size={20} color={colors.text} />
+                    <Text style={styles.menuItemText}>Unarchive</Text>
+                  </TouchableOpacity>
+                  <View style={styles.separator} />
+                </>
+              )}
+
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
@@ -97,13 +135,9 @@ export function StoryContextMenu({
                   onClose();
                 }}
               >
-                <Feather
-                  name={isPublished ? 'archive' : 'trash-2'}
-                  size={20}
-                  color="#E74C3C"
-                />
-                <Text style={[styles.menuItemText, styles.deleteText]}>
-                  {isPublished ? 'Archive' : 'Delete'}
+                <Feather name="trash-2" size={20} color={colors.error} />
+                <Text style={[styles.menuItemText, { color: colors.error }]}>
+                  {isPublished ? 'Delete Local' : 'Delete'}
                 </Text>
               </TouchableOpacity>
             </Animated.View>

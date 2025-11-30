@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Switch } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Switch, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import Feather from '@expo/vector-icons/Feather';
 import * as githubService from '@/services/githubService';
+import * as storageService from '@/services/storageService';
 import { GitHubConfig } from '@/types';
 import { GITHUB_OWNER, GITHUB_REPO } from '@/constants/github';
 
@@ -89,6 +90,40 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleClearCache = () => {
+    Alert.alert(
+      'Clear Cache & Refresh',
+      'This will delete all local data (including drafts!) and re-download published stories from GitHub. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear & Refresh',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              // 1. Clear local storage
+              await storageService.clearAllStories();
+              
+              // 2. Fetch from GitHub
+              const stories = await githubService.fetchAllStories();
+              
+              // 3. Save to local storage
+              await storageService.saveStories(stories);
+              
+              Alert.alert('Success', `Cache cleared and ${stories.length} stories restored.`);
+            } catch (error) {
+              console.error(error);
+              Alert.alert('Error', 'Failed to refresh stories');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -96,7 +131,7 @@ export default function SettingsScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>GitHub Settings</Text>
+          <Text style={styles.headerTitle}>Settings</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -114,7 +149,21 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Repository Configuration</Text>
+            <Text style={styles.sectionTitle}>Content</Text>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => router.push('/archived')}
+            >
+              <View style={styles.menuItemLeft}>
+                <Feather name="archive" size={20} color={colors.text} />
+                <Text style={styles.menuItemText}>Archived Stories</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={colors.gray} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>GitHub Configuration</Text>
             <Text style={styles.sectionDescription}>
               Repository: {GITHUB_OWNER}/{GITHUB_REPO}
             </Text>
@@ -165,6 +214,28 @@ export default function SettingsScreen() {
             <Text style={styles.infoText}>
               Your token is stored securely on your device and never shared.
             </Text>
+          </View>
+
+          {/* Option 8: #EF6351 - Bittersweet */}
+          <View style={[styles.dangerZone, { backgroundColor: '#FFF5F3', borderColor: '#F8C7BE' }]}>
+            <View style={styles.dangerHeader}>
+              <Feather name="alert-triangle" size={20} color="#EF6351" />
+              <Text style={[styles.dangerTitle, { color: '#EF6351' }]}>Danger Zone</Text>
+            </View>
+            <Text style={styles.dangerDescription}>
+              This will delete all local drafts and re-download published stories from GitHub.
+            </Text>
+            <TouchableOpacity 
+              style={[styles.dangerButton, { backgroundColor: '#EF6351' }]}
+              onPress={handleClearCache}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.dangerButtonText}>Clear Cache & Refresh</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -335,5 +406,66 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text,
     lineHeight: 18,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.white,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.lines,
+    marginBottom: 12,
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  menuItemText: {
+    fontFamily: typography.fonts.ui,
+    fontSize: 16,
+    color: colors.text,
+  },
+  dangerZone: {
+    marginTop: 32,
+    backgroundColor: '#FAF0ED', // warm peachy background
+    borderWidth: 2,
+    borderColor: '#E8BFB3', // warm terracotta border
+    borderRadius: 12,
+    padding: 16,
+  },
+  dangerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  dangerTitle: {
+    fontFamily: typography.fonts.display,
+    fontSize: 20,
+    color: '#CE6A52',
+  },
+  dangerDescription: {
+    fontFamily: typography.fonts.body,
+    fontSize: 13,
+    color: colors.text,
+    opacity: 0.75,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  dangerButton: {
+    backgroundColor: '#CE6A52',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  dangerButtonText: {
+    fontFamily: typography.fonts.ui,
+    fontSize: 14,
+    color: colors.white,
+    fontWeight: '600',
   },
 });
