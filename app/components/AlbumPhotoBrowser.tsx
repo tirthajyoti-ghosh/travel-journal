@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Linking, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
@@ -200,7 +201,7 @@ export function AlbumPhotoBrowser({albumShareUrl, onClose, onPhotoSelect }: Albu
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
           <Feather name="x" size={24} color={colors.text} />
@@ -250,7 +251,7 @@ export function AlbumPhotoBrowser({albumShareUrl, onClose, onPhotoSelect }: Albu
           <Text style={styles.refreshText}>Refresh</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
