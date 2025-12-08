@@ -11,6 +11,7 @@ export interface Story {
   title: string;
   date: string;
   location: string;
+  coordinates?: [number, number];
   album_share_url?: string;
   media_item_ids?: string[];
   tags?: string[];
@@ -36,6 +37,7 @@ export function getStoryBySlug(slug: string): Story {
     title: data.title,
     date: data.date,
     location: data.location,
+    coordinates: data.coordinates,
     album_share_url: data.album_share_url,
     media_item_ids: data.media_item_ids,
     tags: data.tags,

@@ -21,6 +21,13 @@ const generateStory = () => {
   const slug = title.toLowerCase().replace(/ /g, '-') + '-' + date;
   const location = `${faker.location.city()}, ${faker.location.country()}`;
   
+  // Generate real coordinates for the map (Southeast Asia Focus)
+  // Lat: -10 to 25, Long: 95 to 140
+  const coordinates = [
+    faker.location.longitude({ min: 95, max: 140 }),
+    faker.location.latitude({ min: -10, max: 25 })
+  ];
+  
   // Generate real-looking image URLs from Picsum
   // We use a seed to ensure the same URL always gives the same image (good for caching)
   // but we want different images for different items.
@@ -36,6 +43,7 @@ title: "${title}"
 date: "${date}"
 slug: "${slug}"
 location: "${location}"
+coordinates: [${coordinates[0]}, ${coordinates[1]}]
 album_share_url: "https://photos.app.goo.gl/album-${faker.string.alphanumeric(8)}"
 media_item_ids:
 ${media.map(m => `  - "${m}"`).join('\n')}
