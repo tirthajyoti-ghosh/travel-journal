@@ -209,7 +209,8 @@ export default function EditorScreen() {
       // Get HTML content from editor
       const content = await editor.getHTML();
       
-      await storageService.saveStory({
+      // Save locally first
+      const savedStory = await storageService.saveStory({
         id: storyId,
         title: title.trim(),
         content: content,
@@ -217,6 +218,24 @@ export default function EditorScreen() {
         isDraft: true,
         albumShareUrl,
       });
+
+      // Try to save to GitHub if online and configured
+      if (!isOffline) {
+        const isConfigured = await githubService.isGitHubConfigured();
+        if (isConfigured) {
+           const result = await githubService.saveDraft(savedStory);
+           if (result.success) {
+             // Update local story with githubPath if it was successful
+             await storageService.saveStory({
+               ...savedStory,
+               githubPath: result.path,
+             });
+           } else {
+             console.warn('Failed to save draft to GitHub:', result.error);
+           }
+        }
+      }
+
       router.back();
     } catch (error) {
       console.error('Failed to save story:', error);

@@ -119,6 +119,7 @@ const generateMarkdown = (story: Story): string => {
 title: "${story.title}"
 date: "${story.date}"
 location: "${story.location}"
+${story.isDraft ? 'draft: true' : ''}
 ${story.archived ? `archived: true\narchivedAt: "${story.archivedAt || new Date().toISOString()}"` : ''}
 ${story.albumShareUrl ? `media:\n  - "${story.albumShareUrl}"` : ''}
 ---
@@ -574,8 +575,8 @@ const parseMarkdown = (content: string, path: string): Story | null => {
       content: htmlContent,
       images: [], 
       albumShareUrl: metadata.media ? metadata.media.replace('- ', '').trim() : undefined,
-      isDraft: false,
-      isPublished: true,
+      isDraft: metadata.draft === 'true',
+      isPublished: metadata.draft !== 'true',
       publishedAt: metadata.date,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -586,6 +587,105 @@ const parseMarkdown = (content: string, path: string): Story | null => {
   } catch (error) {
     console.error('Error parsing markdown:', error);
     return null;
+  }
+};
+
+/**
+ * Save draft to GitHub
+ * Similar to publishStory but marks as draft
+ */
+export const saveDraft = async (story: Story): Promise<PublishResult> => {
+  try {
+    const config = await loadGitHubConfig();
+    
+    if (!config) {
+      return {
+        success: false,
+        error: 'GitHub not configured. Please set up your token and repository in Settings.',
+      };
+    }
+
+    // Override branch based on environment
+    const targetBranch = getTargetBranch();
+    const activeConfig = { ...config, branch: targetBranch };
+
+    // Determine if this is an update or new story
+    // For drafts, we check if we have a githubPath already
+    const isUpdate = !!(story.githubPath);
+    
+    // Use existing path for updates, generate new for first save
+    const path = isUpdate && story.githubPath ? story.githubPath : `stories/${generateFilename(story)}`;
+    
+    // Ensure story is marked as draft for markdown generation
+    const draftStory = { ...story, isDraft: true };
+    const content = generateMarkdown(draftStory);
+    
+    // Base64 encode content
+    const encodedContent = btoa(unescape(encodeURIComponent(content)));
+    
+    // Get existing file SHA
+    console.log('Checking for existing file (draft). Path:', path, 'Branch:', activeConfig.branch);
+    const existingSha = await getFileSha(activeConfig, path);
+    console.log('Retrieved SHA:', existingSha);
+
+    if (isUpdate && !existingSha) {
+      // If we thought we were updating but file is gone, we'll just create it again (warn in logs)
+      console.warn('Expected to update existing draft but file not found on GitHub. Creating new.');
+    }
+    
+    // Prepare commit message
+    const commitMessage = (isUpdate || existingSha)
+      ? `Update draft: ${story.title}`
+      : `Save draft: ${story.title}`;
+
+    console.log('Saving draft to GitHub:', {
+      path,
+      branch: activeConfig.branch,
+      isUpdate,
+      hasSha: !!existingSha,
+    });
+
+    // Create or update file
+    const response = await fetch(
+      `https://api.github.com/repos/${activeConfig.owner}/${activeConfig.repo}/contents/${path}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${activeConfig.token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: commitMessage,
+          content: encodedContent,
+          branch: activeConfig.branch,
+          ...(existingSha && { sha: existingSha }),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('GitHub API Error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to save draft to GitHub',
+      };
+    }
+
+    const result = await response.json();
+    
+    return {
+      success: true,
+      path: path,
+      url: result.content?.html_url,
+    };
+  } catch (error) {
+    console.error('Save draft error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
   }
 };
 
