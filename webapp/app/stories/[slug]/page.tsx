@@ -1,12 +1,25 @@
 import { getStoryBySlug, getStorySlugs } from '@/lib/api';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import StoryHeader from '@/app/components/StoryHeader';
+import StoryBody from '@/app/components/StoryBody';
+import StoryFooter from '@/app/components/StoryFooter';
+import MediaArtifact from '@/app/components/MediaArtifact';
 
 export async function generateStaticParams() {
   const slugs = getStorySlugs();
   return slugs.map((slug) => ({
     slug: slug.replace(/\.md$/, ''),
   }));
+}
+
+// Calculate reading time (avg 200 words per minute)
+function calculateReadingTime(text: string): number {
+  const wordsPerMinute = 200;
+  const wordCount = text.trim().split(/\s+/).length;
+  return Math.ceil(wordCount / wordsPerMinute);
 }
 
 export default async function StoryPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -19,41 +32,93 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
     notFound();
   }
 
+  const readingTime = calculateReadingTime(story.content);
+
   return (
-    <main className="min-h-screen p-8 max-w-3xl mx-auto font-sans">
-      <Link href="/" className="text-blue-500 hover:underline mb-8 block">
-        ← Back to Map
+    <div className="logbook-page">
+      {/* Back navigation */}
+      <Link 
+        href="/" 
+        className="fixed top-6 left-6 z-50 px-4 py-2 bg-white/90 hover:bg-white rounded-lg shadow-md transition-all hover:shadow-lg"
+        style={{ fontFamily: 'var(--font-inter)' }}
+      >
+        <span className="inline-flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Back to Map
+        </span>
       </Link>
 
-      <article className="prose lg:prose-xl">
-        <h1 className="text-4xl font-bold mb-2">{story.title}</h1>
-        <div className="flex items-center text-gray-500 mb-8 text-sm">
-          <span>{story.date}</span>
-          <span className="mx-2">•</span>
-          <span>{story.location}</span>
+      <StoryHeader 
+        title={story.title}
+        location={story.location}
+        date={story.date}
+      />
+
+      {/* Media Gallery - Polaroid style */}
+      {story.media_item_ids && story.media_item_ids.length > 0 && (
+        <div className={`${story.media_item_ids.length === 1 ? 'flex justify-center' : 'media-collage'} px-4`}>
+          {story.media_item_ids.map((id, i) => (
+            <MediaArtifact
+              key={i}
+              src={id}
+              alt={`${story.title} - Photo ${i + 1}`}
+              caption={i === 0 ? story.location : undefined}
+            />
+          ))}
         </div>
+      )}
 
-        {/* Media Placeholder */}
-        {story.media_item_ids && story.media_item_ids.length > 0 && (
-          <div className="flex gap-4 overflow-x-auto py-4 mb-8">
-            {story.media_item_ids.map((id, i) => (
-              <div key={i} className="w-64 h-48 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200">
-                {id.startsWith('http') ? (
-                  <img src={id} alt={`Media ${i}`} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    Media {id}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="whitespace-pre-wrap font-serif leading-relaxed">
+      <StoryBody>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            h1: ({ children }) => (
+              <h2 className="font-[family-name:var(--font-caveat)] text-4xl font-bold my-6">
+                {children}
+              </h2>
+            ),
+            h2: ({ children }) => (
+              <h2 className="font-[family-name:var(--font-caveat)] text-3xl font-bold my-5">
+                {children}
+              </h2>
+            ),
+            h3: ({ children }) => (
+              <h3 className="font-[family-name:var(--font-patrick-hand)] text-2xl my-4">
+                {children}
+              </h3>
+            ),
+            blockquote: ({ children }) => (
+              <blockquote className="border-l-4 border-[var(--soft-highlight)] pl-6 my-8 italic font-[family-name:var(--font-caveat)] text-2xl text-[var(--sepia-accent)]">
+                {children}
+              </blockquote>
+            ),
+            img: ({ src, alt }) => (
+              <MediaArtifact
+                src={typeof src === 'string' ? src : ''}
+                alt={alt || 'Story image'}
+              />
+            ),
+            p: ({ children }) => (
+              <p className="mb-6 leading-relaxed">{children}</p>
+            ),
+            ul: ({ children }) => (
+              <ul className="list-disc list-inside mb-6 space-y-2">{children}</ul>
+            ),
+            ol: ({ children }) => (
+              <ol className="list-decimal list-inside mb-6 space-y-2">{children}</ol>
+            ),
+          }}
+        >
           {story.content}
-        </div>
-      </article>
-    </main>
+        </ReactMarkdown>
+      </StoryBody>
+
+      <StoryFooter 
+        publishedDate={story.date}
+        readingTime={readingTime}
+      />
+    </div>
   );
 }

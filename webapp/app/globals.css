@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
 :root {
+  /* Color Palette - Travel Journal Theme */
+  --parchment-base: #F3E8D2;
+  --ink-text: #22201B;
+  --sepia-accent: #7A5C3B;
+  --soft-highlight: #F2D9A6;
+  --paper-shadow: rgba(0, 0, 0, 0.08);
+  --watercolor-overlay: rgba(135, 169, 184, 0.08);
+  
+  /* Legacy map colors */
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -8,8 +17,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-lora);
+  --font-mono: var(--font-roboto-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,4 +103,307 @@ body {
   0%, 100% { transform: translateX(-50%) rotate(0deg) scale(1.05); }
   25% { transform: translateX(-50%) rotate(-3deg) scale(1.05); }
   75% { transform: translateX(-50%) rotate(3deg) scale(1.05); }
+}
+
+/* ====================================
+   STORY PAGE STYLES - Logbook Theme
+   ==================================== */
+
+/* Main story page container */
+.logbook-page {
+  min-height: 100vh;
+  background-color: var(--parchment-base);
+  background-image: 
+    url('/textures/paper-hatch.png'),
+    url('/textures/paper-texture.png');
+  background-size: cover, cover;
+  background-blend-mode: multiply, normal;
+  position: relative;
+}
+
+/* Story header area with watercolor wash */
+.story-header {
+  position: relative;
+  padding: 4rem 2rem 5rem;
+  background-image: url('/textures/sea-watercolor.png');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  opacity: 0.96;
+}
+
+.story-header::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  background-image: url('/icons/compass-rose.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+/* Story title - handwritten style */
+.story-title {
+  font-family: var(--font-caveat);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  color: var(--ink-text);
+  text-align: center;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+/* Metadata (location, date) */
+.story-metadata {
+  font-family: var(--font-inter);
+  font-size: 0.875rem;
+  color: var(--sepia-accent);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.story-metadata svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+/* Ink flourish divider */
+.ink-divider {
+  width: 400px;
+  height: 80px;
+  margin: 0 auto;
+  background-image: url('/icons/ink-flourish.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.6;
+}
+
+/* Story body with ruled notebook lines */
+.story-body {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 28px,
+    rgba(0, 0, 0, 0.04) 28px,
+    rgba(0, 0, 0, 0.04) 29px
+  );
+  position: relative;
+}
+
+.story-content {
+  font-family: var(--font-lora);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: var(--ink-text);
+  letter-spacing: 0.01em;
+}
+
+/* Typography within story content */
+.story-content h2 {
+  font-family: var(--font-caveat);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ink-text);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.story-content h3 {
+  font-family: var(--font-patrick-hand);
+  font-size: 1.5rem;
+  color: var(--sepia-accent);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.story-content p {
+  margin-bottom: 1.5rem;
+}
+
+.story-content blockquote {
+  font-family: var(--font-caveat);
+  font-size: 1.375rem;
+  font-style: italic;
+  color: var(--sepia-accent);
+  border-left: 3px solid var(--soft-highlight);
+  padding-left: 1.5rem;
+  margin: 2rem 0;
+  transform: rotate(-0.5deg);
+}
+
+/* Drop cap for first letter */
+.story-content p:first-of-type::first-letter {
+  font-family: var(--font-caveat);
+  font-size: 3.5rem;
+  font-weight: 700;
+  line-height: 1;
+  float: left;
+  margin-right: 0.5rem;
+  color: var(--sepia-accent);
+}
+
+/* Polaroid photo artifact */
+.artifact-polaroid {
+  background: #fff;
+  padding: 10px;
+  padding-bottom: 40px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  margin: 2rem auto;
+  max-width: 400px;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.artifact-polaroid:nth-of-type(odd) {
+  transform: rotate(-2deg);
+}
+
+.artifact-polaroid:nth-of-type(even) {
+  transform: rotate(1.5deg);
+}
+
+.artifact-polaroid:hover {
+  transform: translateY(-4px) rotate(0deg) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+.artifact-polaroid img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Tape decoration on polaroid corners */
+.artifact-polaroid::before,
+.artifact-polaroid::after {
+  content: '';
+  position: absolute;
+  width: 60px;
+  height: 25px;
+  background-image: url('/icons/tape.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.7;
+  z-index: 10;
+}
+
+.artifact-polaroid::before {
+  top: -8px;
+  left: 20px;
+  transform: rotate(-15deg);
+}
+
+.artifact-polaroid::after {
+  top: -8px;
+  right: 20px;
+  transform: rotate(15deg);
+}
+
+/* Polaroid caption */
+.polaroid-caption {
+  font-family: var(--font-indie-flower);
+  font-size: 1rem;
+  color: var(--sepia-accent);
+  text-align: center;
+  margin-top: 0.5rem;
+  transform: rotate(-1deg);
+}
+
+/* Media collage for multiple photos */
+.media-collage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin: 3rem 0;
+  padding: 2rem 0;
+}
+
+/* Story footer with stamp */
+.story-footer {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.footer-stamp {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 1.5rem;
+  background-image: url('/icons/passport-stamps.png');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.7;
+  transform: rotate(-8deg);
+  mix-blend-mode: multiply;
+}
+
+.footer-metadata {
+  font-family: var(--font-inter);
+  font-size: 0.8125rem;
+  color: var(--sepia-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* Page entrance animation */
+@keyframes unroll {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logbook-page {
+  animation: unroll 0.6s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .story-header {
+    padding: 3rem 1.5rem 2rem;
+  }
+  
+  .story-title {
+    font-size: 2.5rem;
+  }
+  
+  .story-body {
+    padding: 2rem 1.5rem;
+  }
+  
+  .story-content {
+    font-size: 1rem;
+  }
+  
+  .media-collage {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .artifact-polaroid {
+    transform: rotate(0deg) !important;
+  }
 }
