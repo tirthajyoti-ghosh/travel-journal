@@ -31,7 +31,7 @@ const generateStory = () => {
   // Generate real-looking image URLs from Picsum
   // We use a seed to ensure the same URL always gives the same image (good for caching)
   // but we want different images for different items.
-  const numMedia = faker.number.int({ min: 1, max: 3 });
+  const numMedia = faker.number.int({ min: 5, max: 8 });
   const media = Array.from({ length: numMedia }).map(() => 
     `https://picsum.photos/seed/${faker.string.uuid()}/800/600`
   );
@@ -52,21 +52,47 @@ ${tags.map(t => `  - ${t}`).join('\n')}
 draft: false
 ---`;
 
-  // Inject an image into the body sometimes
-  const bodyImage = `![Random Travel Moment](https://picsum.photos/seed/${faker.string.uuid()}/800/400)`;
+  // Inject multiple images into the body
+  const bodyImages = Array.from({ length: 5 }).map(() => 
+    `![${faker.lorem.words(3)}](https://picsum.photos/seed/${faker.string.uuid()}/800/400)`
+  );
   
   const body = `
 # ${title}
 
 ${faker.lorem.paragraphs(2)}
 
-${bodyImage}
+${bodyImages[0]}
+
+${faker.lorem.paragraphs(2)}
+
+${bodyImages[1]}
 
 ## ${faker.lorem.sentence()}
 
 ${faker.lorem.paragraphs(2)}
 
+${bodyImages[2]}
+
+${faker.lorem.paragraphs(1)}
+
 > ${faker.lorem.sentence()}
+
+${faker.lorem.paragraphs(2)}
+
+${bodyImages[3]}
+
+${faker.lorem.paragraphs(2)}
+
+### ${faker.lorem.sentence()}
+
+${faker.lorem.paragraphs(1)}
+
+**${faker.lorem.sentence()}**
+
+${faker.lorem.paragraphs(2)}
+
+${bodyImages[4]}
 
 ${faker.lorem.paragraphs(1)}
 `;
