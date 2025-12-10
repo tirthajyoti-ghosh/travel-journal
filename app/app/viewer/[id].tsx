@@ -162,7 +162,9 @@ export default function ViewerScreen() {
 
         <ScrollView style={styles.scrollContent}>
           <Text style={styles.title}>{story.title}</Text>
-          <Text style={styles.meta}>{story.date} • {story.location}</Text>
+          <Text style={styles.meta}>
+            {story.location ? `${story.date} • ${story.location}` : story.date}
+          </Text>
           
           {story.albumShareUrl && (
             <TouchableOpacity 

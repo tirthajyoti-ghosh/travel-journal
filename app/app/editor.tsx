@@ -180,7 +180,8 @@ export default function EditorScreen() {
       if (story) {
         setLoadedStory(story);
         setTitle(story.title);
-        setLocation(story.location);
+        // Filter out legacy "Unknown Location" values
+        setLocation(story.location === 'Unknown Location' ? '' : story.location);
         setAlbumShareUrl(story.albumShareUrl);
         // Set editor content
         if (story.content) {
@@ -194,27 +195,24 @@ export default function EditorScreen() {
   };
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      Alert.alert('Missing Title', 'Please add a title to your story');
-      return;
-    }
-
-    if (!location.trim()) {
-      Alert.alert('Missing Location', 'Please add a location to your story');
+    // Get HTML content from editor first for validation
+    const content = await editor.getHTML();
+    const cleanContent = content.replace(/<[^>]*>/g, '').trim();
+    
+    // Require either title or body content
+    if (!title.trim() && !cleanContent) {
+      Alert.alert('Empty Draft', 'Please add a title or some content to save your draft');
       return;
     }
 
     setLoading(true);
     try {
-      // Get HTML content from editor
-      const content = await editor.getHTML();
-      
       // Save locally first
       const savedStory = await storageService.saveStory({
         id: storyId,
         title: title.trim(),
         content: content,
-        location: location.trim() || 'Unknown Location',
+        location: location.trim(),
         isDraft: true,
         albumShareUrl,
       });
@@ -288,7 +286,7 @@ export default function EditorScreen() {
         id: storyId || Date.now().toString(),
         title: title.trim(),
         content: content,
-        location: location.trim() || 'Unknown Location',
+        location: location.trim(),
         date: loadedStory?.date || new Date().toISOString(),
         isDraft: false,
         albumShareUrl,

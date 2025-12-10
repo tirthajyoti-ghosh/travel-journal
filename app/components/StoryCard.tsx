@@ -10,6 +10,15 @@ interface StoryCardProps {
   onLongPress?: (event: any) => void;
 }
 
+function extractBodyPreview(htmlContent: string): string {
+  // Remove HTML tags
+  const textContent = htmlContent.replace(/<[^>]*>/g, ' ');
+  // Remove extra whitespace and newlines
+  const cleanedText = textContent.replace(/\s+/g, ' ').trim();
+  // Return first line (up to ~80 chars)
+  return cleanedText.substring(0, 80);
+}
+
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
@@ -34,6 +43,7 @@ function formatDate(dateString: string): string {
 
 export function StoryCard({ story, onPress, onLongPress }: StoryCardProps) {
   const isDraft = story.isDraft || !story.isPublished;
+  const bodyPreview = extractBodyPreview(story.content || '');
   
   return (
     <TouchableOpacity
@@ -61,15 +71,26 @@ export function StoryCard({ story, onPress, onLongPress }: StoryCardProps) {
       </View>
 
       {/* Title */}
-      <Text style={styles.title} numberOfLines={2}>
-        {story.title}
-      </Text>
+      {story.title ? (
+        <Text style={styles.title} numberOfLines={2}>
+          {story.title}
+        </Text>
+      ) : null}
+
+      {/* Body Preview */}
+      {bodyPreview ? (
+        <Text style={styles.bodyPreview} numberOfLines={1}>
+          {bodyPreview}
+        </Text>
+      ) : null}
 
       {/* Metadata */}
       <Text style={styles.meta}>
         {isDraft 
           ? `Last edited: ${formatRelativeTime(story.updatedAt || story.createdAt || new Date().toISOString())}`
-          : `${formatDate(story.publishedAt || story.date)} • ${story.location}`
+          : story.location 
+            ? `${formatDate(story.publishedAt || story.date)} • ${story.location}`
+            : formatDate(story.publishedAt || story.date)
         }
       </Text>
     </TouchableOpacity>
@@ -135,6 +156,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 8,
     lineHeight: 28,
+  },
+  bodyPreview: {
+    fontFamily: typography.fonts.body,
+    fontSize: 14,
+    color: colors.text,
+    opacity: 0.7,
+    marginBottom: 8,
+    lineHeight: 20,
   },
   meta: {
     fontFamily: typography.fonts.caption,
