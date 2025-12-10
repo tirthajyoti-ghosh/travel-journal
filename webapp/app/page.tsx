@@ -1,12 +1,12 @@
 import { getAllStories } from '@/lib/api';
-import InteractiveMap from './components/InteractiveMap';
+import MapWrapper from './components/MapWrapper';
 
 export default function Home() {
   const stories = getAllStories();
 
   return (
     <main className="h-screen w-screen overflow-hidden">
-      <InteractiveMap stories={stories} />
+      <MapWrapper stories={stories} />
       
       {/* Overlay Title */}
       <div className="absolute top-8 left-8 z-10 pointer-events-none">

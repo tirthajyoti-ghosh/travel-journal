@@ -24,3 +24,74 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Map Pin Hover Animation */
+.map-pin-group:hover image {
+  animation: wobble 0.3s ease-in-out;
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg) scale(1.05); }
+  25% { transform: rotate(-2deg) scale(1.05); }
+  75% { transform: rotate(2deg) scale(1.05); }
+}
+
+/* Paper texture overlay for land masses (optional - can be applied via SVG pattern) */
+.land-texture {
+  background-image: url('/textures/paper-texture.png');
+  background-size: cover;
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* Leaflet Popup Custom Styling */
+.leaflet-popup-content-wrapper {
+  background: #f9f7f3;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  min-width: 160px;
+}
+
+.leaflet-popup-tip {
+  background: #f9f7f3;
+}
+
+/* Remove default Leaflet controls styling adjustments */
+.leaflet-control-zoom {
+  border: 2px solid rgba(90, 80, 70, 0.2) !important;
+  border-radius: 4px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background-color: rgba(249, 247, 243, 0.95) !important;
+  color: #5a5046 !important;
+  border-bottom: 1px solid rgba(90, 80, 70, 0.15) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #e4d8c3 !important;
+}
+
+/* Custom Marker Styling */
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer;
+}
+
+.custom-marker:hover img {
+  animation: wobble 0.3s ease-in-out;
+}
+
+@keyframes wobble {
+  0%, 100% { transform: translateX(-50%) rotate(0deg) scale(1.05); }
+  25% { transform: translateX(-50%) rotate(-3deg) scale(1.05); }
+  75% { transform: translateX(-50%) rotate(3deg) scale(1.05); }
+}
