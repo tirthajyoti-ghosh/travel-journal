@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Caveat, Lora, Patrick_Hand, Indie_Flower, Inter, Roboto_Mono } from "next/font/google";
+import { Reenie_Beanie, Lora, Patrick_Hand, Indie_Flower, Inter, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 
 // Handwritten identity font - for titles, headings, quotes
-const caveat = Caveat({
-  variable: "--font-caveat",
+const reenieBeanie = Reenie_Beanie({
+  variable: "--font-reenie-beanie",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: "400",
 });
 
 // Primary body font - for story text, paragraphs
@@ -59,7 +59,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${caveat.variable} ${lora.variable} ${patrickHand.variable} ${indieFlower.variable} ${inter.variable} ${robotoMono.variable} antialiased`}
+        className={`${reenieBeanie.variable} ${lora.variable} ${patrickHand.variable} ${indieFlower.variable} ${inter.variable} ${robotoMono.variable} antialiased`}
       >
         {children}
       </body>

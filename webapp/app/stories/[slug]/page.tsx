@@ -57,7 +57,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
       />
 
       {/* Media Gallery - Polaroid style */}
-      {story.media_item_ids && story.media_item_ids.length > 0 && (
+      {/* {story.media_item_ids && story.media_item_ids.length > 0 && (
         <div className={`${story.media_item_ids.length === 1 ? 'flex justify-center' : 'media-collage'} px-4`}>
           {story.media_item_ids.map((id, i) => (
             <MediaArtifact
@@ -68,19 +68,19 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
             />
           ))}
         </div>
-      )}
+      )} */}
 
       <StoryBody>
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
             h1: ({ children }) => (
-              <h2 className="font-[family-name:var(--font-caveat)] text-4xl font-bold my-6">
+              <h2 className="font-[family-name:var(--font-reenie-beanie)] text-4xl font-normal my-6">
                 {children}
               </h2>
             ),
             h2: ({ children }) => (
-              <h2 className="font-[family-name:var(--font-caveat)] text-3xl font-bold my-5">
+              <h2 className="font-[family-name:var(--font-reenie-beanie)] text-3xl font-normal my-5">
                 {children}
               </h2>
             ),
@@ -90,7 +90,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
               </h3>
             ),
             blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-[var(--soft-highlight)] pl-6 my-8 italic font-[family-name:var(--font-caveat)] text-2xl text-[var(--sepia-accent)]">
+              <blockquote className="border-l-4 border-[var(--soft-highlight)] pl-6 my-8 italic font-[family-name:var(--font-reenie-beanie)] text-2xl text-[var(--sepia-accent)]">
                 {children}
               </blockquote>
             ),

@@ -1,6 +1,6 @@
 export const typography = {
   fonts: {
-    display: 'Caveat_700Bold',
+    display: 'ReenieBeanie_400Regular',
     body: 'Lora_400Regular',
     bodyMedium: 'Lora_500Medium',
     caption: 'Inter_400Regular',

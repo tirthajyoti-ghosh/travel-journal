@@ -4,8 +4,8 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { 
-  Caveat_700Bold 
-} from '@expo-google-fonts/caveat';
+  ReenieBeanie_400Regular 
+} from '@expo-google-fonts/reenie-beanie';
 import { 
   Lora_400Regular, 
   Lora_500Medium 
@@ -20,7 +20,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Caveat_700Bold,
+    ReenieBeanie_400Regular,
     Lora_400Regular,
     Lora_500Medium,
     Inter_400Regular,

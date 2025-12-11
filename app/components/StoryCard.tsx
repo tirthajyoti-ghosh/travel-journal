@@ -72,7 +72,7 @@ export function StoryCard({ story, onPress, onLongPress }: StoryCardProps) {
 
       {/* Title */}
       {story.title ? (
-        <Text style={styles.title} numberOfLines={2}>
+        <Text style={styles.title} numberOfLines={1}>
           {story.title}
         </Text>
       ) : null}
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: typography.fonts.display,
-    fontSize: 20,
+    fontSize: 24,
     color: colors.text,
     marginBottom: 8,
     lineHeight: 28,

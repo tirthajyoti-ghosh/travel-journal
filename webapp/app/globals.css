@@ -135,7 +135,7 @@ body {
 .story-header::before {
   content: '';
   position: absolute;
-  top: 50%;
+  top: 30%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 200px;
@@ -150,9 +150,9 @@ body {
 
 /* Story title - handwritten style */
 .story-title {
-  font-family: var(--font-caveat);
+  font-family: var(--font-reenie-beanie);
   font-size: clamp(2.5rem, 5vw, 4rem);
-  font-weight: 700;
+  font-weight: 400;
   color: var(--ink-text);
   text-align: center;
   margin-bottom: 1rem;
@@ -214,9 +214,9 @@ body {
 
 /* Typography within story content */
 .story-content h2 {
-  font-family: var(--font-caveat);
+  font-family: var(--font-reenie-beanie);
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--ink-text);
   margin-top: 2.5rem;
   margin-bottom: 1rem;
@@ -235,7 +235,7 @@ body {
 }
 
 .story-content blockquote {
-  font-family: var(--font-caveat);
+  font-family: var(--font-reenie-beanie);
   font-size: 1.375rem;
   font-style: italic;
   color: var(--sepia-accent);
@@ -247,9 +247,9 @@ body {
 
 /* Drop cap for first letter */
 .story-content p:first-of-type::first-letter {
-  font-family: var(--font-caveat);
+  font-family: var(--font-reenie-beanie);
   font-size: 3.5rem;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1;
   float: left;
   margin-right: 0.5rem;
