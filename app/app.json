@@ -1,26 +1,19 @@
 {
   "expo": {
-    "name": "travel-journal-app",
+    "name": "Nomoscribe",
     "slug": "app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "travel-journal-app",
+    "icon": "./assets/app-icon.png",
+    "scheme": "nomoscribe",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tirthajyotiGhosh.travelJournal"
+      "bundleIdentifier": "com.tirthajyotiGhosh.nomoscribe"
     },
     "android": {
-      "package": "com.tirthajyotiGhosh.travelJournal",
-      "icon": "./assets/android-icons/mipmap-xxxhdpi/ic_launcher.png",
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
+      "package": "com.tirthajyotiGhosh.nomoscribe",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
