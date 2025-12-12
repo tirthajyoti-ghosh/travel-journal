@@ -6,7 +6,7 @@ interface StoryHeaderProps {
 
 export default function StoryHeader({ title, location, date }: StoryHeaderProps) {
   return (
-    <header className="story-header">
+    <header className="story-header pt-28 sm:pt-0 pl-28 sm:pl-0">
       <h1 className="story-title">{title}</h1>
       
       <div className="story-metadata">

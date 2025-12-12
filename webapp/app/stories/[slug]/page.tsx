@@ -7,6 +7,7 @@ import StoryHeader from '@/app/components/StoryHeader';
 import StoryBody from '@/app/components/StoryBody';
 import StoryFooter from '@/app/components/StoryFooter';
 import MediaArtifact from '@/app/components/MediaArtifact';
+import MapThumbnailWrapper from '@/app/components/MapThumbnailWrapper';
 
 export async function generateStaticParams() {
   const slugs = getStorySlugs();
@@ -36,19 +37,11 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="logbook-page">
-      {/* Back navigation */}
-      <Link 
-        href="/" 
-        className="fixed top-6 left-6 z-50 px-4 py-2 bg-white/90 hover:bg-white rounded-lg shadow-md transition-all hover:shadow-lg"
-        style={{ fontFamily: 'var(--font-inter)' }}
-      >
-        <span className="inline-flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          Back to Map
-        </span>
-      </Link>
+      {/* Back navigation - Live map thumbnail */}
+      <MapThumbnailWrapper 
+        coordinates={story.coordinates}
+        zoom={2}
+      />
 
       <StoryHeader 
         title={story.title}
@@ -100,9 +93,19 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
                 alt={alt || 'Story image'}
               />
             ),
-            p: ({ children }) => (
-              <p className="mb-6 leading-relaxed">{children}</p>
-            ),
+            p: ({ children, node }) => {
+              // Check if paragraph only contains an image
+              const hasImage = node?.children?.some(
+                (child: any) => child.tagName === 'img'
+              );
+              
+              // If paragraph only contains an image, render as div to avoid nesting issues
+              if (hasImage) {
+                return <div className="mb-6">{children}</div>;
+              }
+              
+              return <p className="mb-6 leading-relaxed">{children}</p>;
+            },
             ul: ({ children }) => (
               <ul className="list-disc list-inside mb-6 space-y-2">{children}</ul>
             ),

@@ -8,10 +8,17 @@ interface MediaArtifactProps {
 }
 
 export default function MediaArtifact({ src, alt, caption }: MediaArtifactProps) {
-  // Generate a random rotation angle between -2.5 and 2.5 degrees
+  // Generate a consistent rotation angle based on src to avoid hydration mismatch
   const rotation = useMemo(() => {
-    return (Math.random() * 5) - 2.5;
-  }, []);
+    // Use a simple hash of the src to generate consistent rotation
+    let hash = 0;
+    for (let i = 0; i < src.length; i++) {
+      hash = ((hash << 5) - hash) + src.charCodeAt(i);
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    // Map hash to rotation between -2.5 and 2.5 degrees
+    return ((Math.abs(hash) % 50) / 10) - 2.5;
+  }, [src]);
 
   return (
     <div className="artifact-polaroid" style={{ transform: `rotate(${rotation}deg)` }}>
