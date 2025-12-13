@@ -119,6 +119,8 @@ const generateMarkdown = (story: Story): string => {
 title: "${story.title}"
 date: "${story.date}"
 location: "${story.location}"
+createdAt: "${story.createdAt}"
+updatedAt: "${story.updatedAt}"
 ${story.isDraft ? 'draft: true' : ''}
 ${story.archived ? `archived: true\narchivedAt: "${story.archivedAt || new Date().toISOString()}"` : ''}
 ${story.albumShareUrl ? `media:\n  - "${story.albumShareUrl}"` : ''}
@@ -569,7 +571,7 @@ const parseMarkdown = (content: string, path: string): Story | null => {
 
     return {
       id: path.replace('stories/', '').replace('.md', ''),
-      title: metadata.title,
+      title: metadata.title || 'Untitled',
       date: metadata.date || new Date().toISOString(),
       location: metadata.location || '',
       content: htmlContent,
@@ -578,8 +580,8 @@ const parseMarkdown = (content: string, path: string): Story | null => {
       isDraft: metadata.draft === 'true',
       isPublished: metadata.draft !== 'true',
       publishedAt: metadata.date,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: metadata.createdAt || new Date().toISOString(),
+      updatedAt: metadata.updatedAt || new Date().toISOString(),
       githubPath: path,
       archived: metadata.archived === 'true',
       archivedAt: metadata.archivedAt,

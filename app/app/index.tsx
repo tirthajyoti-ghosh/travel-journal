@@ -6,12 +6,14 @@ import { useCallback } from 'react';
 import { StoryCard } from '@/components/StoryCard';
 import { EmptyState } from '@/components/EmptyState';
 import { StoryContextMenu } from '@/components/StoryContextMenu';
+import { SyncStatusBar } from '@/components/SyncStatusBar';
 import { Story } from '@/types';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 import Feather from '@expo/vector-icons/Feather';
 import * as storageService from '@/services/storageService';
 import * as githubService from '@/services/githubService';
+import { useSync } from '@/hooks/use-sync';
 
 export default function HomeScreen() {
   const [stories, setStories] = useState<Story[]>([]);
@@ -19,33 +21,21 @@ export default function HomeScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const { syncing, status, startSync } = useSync();
 
-  const loadStories = async () => {
+  const loadStories = async (skipSync: boolean = false) => {
     setLoading(true);
     try {
-      // Fetch from both local storage and GitHub
-      const [localStories, githubStories] = await Promise.all([
-        storageService.getStories(),
-        githubService.fetchAllStories(),
-      ]);
+      // Trigger sync first (if not skipped and not already syncing)
+      if (!skipSync) {
+        await startSync();
+      }
 
-      // Merge stories: prefer local version if exists, otherwise use GitHub version
-      const storiesMap = new Map<string, Story>();
-      
-      // Add GitHub stories first
-      githubStories.forEach(story => {
-        storiesMap.set(story.id, story);
-      });
-      
-      // Override with local stories (they are more up-to-date)
-      localStories.forEach(story => {
-        storiesMap.set(story.id, story);
-      });
-      
-      const allStories = Array.from(storiesMap.values());
+      // After sync, load from local storage (which now has the latest data)
+      const localStories = await storageService.getStories();
       
       // Filter out archived stories
-      const visible = allStories.filter(s => !s.archived);
+      const visible = localStories.filter(s => !s.archived);
       
       // Separate drafts and published
       const drafts = visible.filter(s => s.isDraft || !s.isPublished);
@@ -147,21 +137,22 @@ export default function HomeScreen() {
     />
   );
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.accent} />
-          </View>
-        </SafeAreaView>
-      </View>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <View style={styles.container}>
+  //       <SafeAreaView style={styles.safeArea}>
+  //         <View style={styles.loadingContainer}>
+  //           <ActivityIndicator size="large" color={colors.accent} />
+  //         </View>
+  //       </SafeAreaView>
+  //     </View>
+  //   );
+  // }
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
+        <SyncStatusBar visible={syncing} status={status} />
+        <View style={[styles.content, syncing && styles.contentWithSync]}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Your Travel Stories</Text>
             <TouchableOpacity 
@@ -247,6 +238,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  contentWithSync: {
+    paddingTop: 32,
   },
   header: {
     flexDirection: 'row',
