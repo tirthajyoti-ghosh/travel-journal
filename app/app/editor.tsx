@@ -84,15 +84,6 @@ export default function EditorScreen() {
     em {
       font-style: italic;
     }
-    /* Ensure paragraphs have minimum height for cursor placement */
-    p {
-      margin: 0.5em 0;
-      min-height: 1.6em;
-    }
-    p:empty::before {
-      content: '\\200B';
-      display: inline-block;
-    }
     /* Image styling */
     img {
       max-width: 85%;
@@ -354,9 +345,13 @@ export default function EditorScreen() {
     storageService.saveData(ALBUM_URL_KEY, shareUrl);
   };
 
-  const handlePhotoInsert = (photoUrl: string) => {
+  const handlePhotoInsert = async (photoUrl: string) => {
     // Insert image into the rich text editor
     editor.setImage(photoUrl);
+    // Add two empty lines after the image for better cursor navigation
+    await new Promise(resolve => setTimeout(resolve, 150));
+    const currentContent = await editor.getHTML();
+    editor.setContent(currentContent + '<p><br></p><p><br></p>');
     editor.focus();
     setShowMediaPicker(false);
   };
