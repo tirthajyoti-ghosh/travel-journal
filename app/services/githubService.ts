@@ -94,6 +94,9 @@ const htmlToMarkdown = (html: string): string => {
     .replace(/<ul>(.*?)<\/ul>/gs, '$1\n')
     .replace(/<ol>(.*?)<\/ol>/gs, '$1\n')
     .replace(/<li>(.*?)<\/li>/g, '- $1\n')
+    // Convert images (do this before removing other tags)
+    .replace(/<img[^>]+src="([^"]+)"[^>]*>/g, '![]($1)\n\n')
+    .replace(/<img[^>]+src='([^']+)'[^>]*>/g, '![]($1)\n\n')
     // Convert regular paragraphs (do this after other conversions)
     .replace(/<p>(.*?)<\/p>/gs, '$1\n\n')
     // Remove any remaining HTML tags
