@@ -22,23 +22,24 @@ interface SyncStatusBarProps {
  */
 export function SyncStatusBar({ visible, status }: SyncStatusBarProps) {
   const insets = useSafeAreaInsets();
-  const translateY = useSharedValue(-50);
+  const BAR_HEIGHT = 32;
+  const translateY = useSharedValue(-(BAR_HEIGHT + insets.top));
 
   useEffect(() => {
     if (visible) {
-      // Slide down
-      translateY.value = withTiming(0, {
+      // Slide down to just below status bar
+      translateY.value = withTiming(insets.top, {
         duration: 300,
         easing: Easing.out(Easing.ease),
       });
     } else {
-      // Slide up
-      translateY.value = withTiming(-50, {
+      // Slide up above status bar
+      translateY.value = withTiming(-(BAR_HEIGHT + insets.top), {
         duration: 300,
         easing: Easing.in(Easing.ease),
       });
     }
-  }, [visible]);
+  }, [visible, insets.top]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -73,7 +74,7 @@ export function SyncStatusBar({ visible, status }: SyncStatusBarProps) {
   };
 
   return (
-    <Animated.View style={[styles.container, animatedStyle, { backgroundColor: getBackgroundColor(), top: insets.top }]}>
+    <Animated.View style={[styles.container, animatedStyle, { backgroundColor: getBackgroundColor() }]}>
       <View style={styles.content}>
         {status === 'syncing' && (
           <ActivityIndicator size="small" color={colors.accent} style={styles.spinner} />
