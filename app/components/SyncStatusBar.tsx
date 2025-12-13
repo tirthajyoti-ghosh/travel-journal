@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -20,6 +21,7 @@ interface SyncStatusBarProps {
  * Shows at the top of the screen when syncing
  */
 export function SyncStatusBar({ visible, status }: SyncStatusBarProps) {
+  const insets = useSafeAreaInsets();
   const translateY = useSharedValue(-50);
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export function SyncStatusBar({ visible, status }: SyncStatusBarProps) {
   };
 
   return (
-    <Animated.View style={[styles.container, animatedStyle, { backgroundColor: getBackgroundColor() }]}>
+    <Animated.View style={[styles.container, animatedStyle, { backgroundColor: getBackgroundColor(), top: insets.top }]}>
       <View style={styles.content}>
         {status === 'syncing' && (
           <ActivityIndicator size="small" color={colors.accent} style={styles.spinner} />

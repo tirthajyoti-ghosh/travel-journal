@@ -150,9 +150,9 @@ export default function HomeScreen() {
   // }
   return (
     <View style={styles.container}>
+      <SyncStatusBar visible={syncing} status={status} />
       <SafeAreaView style={styles.safeArea}>
-        <SyncStatusBar visible={syncing} status={status} />
-        <View style={[styles.content, syncing && styles.contentWithSync]}>
+        <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Your Travel Stories</Text>
             <TouchableOpacity 
@@ -238,9 +238,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-  },
-  contentWithSync: {
-    paddingTop: 32,
   },
   header: {
     flexDirection: 'row',
