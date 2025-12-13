@@ -23,9 +23,29 @@ export default function HomeScreen() {
   const loadStories = async () => {
     setLoading(true);
     try {
-      const loadedStories = await storageService.getStories();
+      // Fetch from both local storage and GitHub
+      const [localStories, githubStories] = await Promise.all([
+        storageService.getStories(),
+        githubService.fetchAllStories(),
+      ]);
+
+      // Merge stories: prefer local version if exists, otherwise use GitHub version
+      const storiesMap = new Map<string, Story>();
+      
+      // Add GitHub stories first
+      githubStories.forEach(story => {
+        storiesMap.set(story.id, story);
+      });
+      
+      // Override with local stories (they are more up-to-date)
+      localStories.forEach(story => {
+        storiesMap.set(story.id, story);
+      });
+      
+      const allStories = Array.from(storiesMap.values());
+      
       // Filter out archived stories
-      const visible = loadedStories.filter(s => !s.archived);
+      const visible = allStories.filter(s => !s.archived);
       
       // Separate drafts and published
       const drafts = visible.filter(s => s.isDraft || !s.isPublished);

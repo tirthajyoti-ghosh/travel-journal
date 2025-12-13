@@ -569,7 +569,7 @@ const parseMarkdown = (content: string, path: string): Story | null => {
 
     return {
       id: path.replace('stories/', '').replace('.md', ''),
-      title: metadata.title || 'Untitled',
+      title: metadata.title,
       date: metadata.date || new Date().toISOString(),
       location: metadata.location || '',
       content: htmlContent,

@@ -84,12 +84,27 @@ export default function EditorScreen() {
     em {
       font-style: italic;
     }
+    /* Ensure paragraphs have minimum height for cursor placement */
+    p {
+      margin: 0.5em 0;
+      min-height: 1.6em;
+    }
+    p:empty::before {
+      content: '\\200B';
+      display: inline-block;
+    }
+    /* Image styling */
     img {
-      max-width: 100%;
+      max-width: 85%;
       height: auto;
-      margin: 1em 0;
+      margin: 1em auto 1.5em auto;
+      display: block;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    /* When image is in a paragraph, ensure proper spacing */
+    p img {
+      margin: 0.5em auto 1em auto;
     }
   `;
 
@@ -228,10 +243,21 @@ export default function EditorScreen() {
                ...savedStory,
                githubPath: result.path,
              });
+             console.log('Draft saved to GitHub:', result.path);
            } else {
-             console.warn('Failed to save draft to GitHub:', result.error);
+             console.error('Failed to save draft to GitHub:', result.error);
+             // Show alert to user about GitHub sync failure
+             Alert.alert(
+               'Draft Saved Locally',
+               `Your draft was saved on this device, but couldn't be synced to GitHub: ${result.error}`,
+               [{ text: 'OK' }]
+             );
            }
+        } else {
+          console.log('GitHub not configured - draft saved locally only');
         }
+      } else {
+        console.log('Offline - draft saved locally only');
       }
 
       router.back();
