@@ -53,10 +53,11 @@ export async function saveStory(story: Partial<Story>): Promise<Story> {
       return updatedStory;
     } else {
       // Create new
+      const storyDate = story.date || new Date().toISOString().split('T')[0];
       const newStory: Story = {
-        id: story.id || generateId(),
+        id: story.id || generateId(storyDate),
         title: story.title || '',
-        date: story.date || new Date().toISOString().split('T')[0],
+        date: storyDate,
         location: story.location || '',
         content: story.content || '',
         images: story.images || [],
@@ -115,10 +116,12 @@ export async function saveStories(stories: Story[]): Promise<void> {
 }
 
 /**
- * Generate a unique ID for stories
+ * Generate a unique ID for stories based on date timestamp
+ * This matches the GitHub filename format for consistency
  */
-function generateId(): string {
-  return `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+function generateId(date?: string): string {
+  const timestamp = date ? new Date(date).getTime() : Date.now();
+  return timestamp.toString();
 }
 
 /**

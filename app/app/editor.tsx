@@ -298,13 +298,14 @@ export default function EditorScreen() {
       const content = await editor.getHTML();
       
       // Create story object, preserving existing metadata if editing
+      const storyDate = loadedStory?.date || new Date().toISOString();
       const story: Story = {
         ...loadedStory, // Merge existing story data (includes isPublished, publishedAt, githubPath)
-        id: storyId || Date.now().toString(),
+        id: storyId || new Date(storyDate).getTime().toString(),
         title: title.trim(),
         content: content,
         location: location.trim(),
-        date: loadedStory?.date || new Date().toISOString(),
+        date: storyDate,
         isDraft: false,
         albumShareUrl,
         images: [],

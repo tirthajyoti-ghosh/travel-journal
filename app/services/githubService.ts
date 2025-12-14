@@ -1,5 +1,6 @@
 import * as storageService from './storageService';
 import { GitHubConfig, Story } from '@/types';
+import { htmlToMarkdown, markdownToHtml } from './markdownConverter';
 
 const GITHUB_CONFIG_KEY = '@travel_journal:github_config';
 
@@ -65,54 +66,7 @@ const generateFilename = (story: Story): string => {
   return `${timestamp}.md`;
 };
 
-/**
- * Convert HTML content to markdown
- * Preserves spacing by converting empty <p> tags to blank lines
- */
-const htmlToMarkdown = (html: string): string => {
-  let markdown = html
-    // Convert empty paragraphs to double newlines (blank lines in markdown)
-    .replace(/<p><\/p>/g, '\n\n')
-    .replace(/<p>\s*<\/p>/g, '\n\n')
-    // Convert headings
-    .replace(/<h1>(.*?)<\/h1>/g, '# $1\n\n')
-    .replace(/<h2>(.*?)<\/h2>/g, '## $1\n\n')
-    .replace(/<h3>(.*?)<\/h3>/g, '### $1\n\n')
-    // Convert bold and italic
-    .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
-    .replace(/<b>(.*?)<\/b>/g, '**$1**')
-    .replace(/<em>(.*?)<\/em>/g, '*$1*')
-    .replace(/<i>(.*?)<\/i>/g, '*$1*')
-    // Convert line breaks
-    .replace(/<br\s*\/?>/g, '\n')
-    // Convert blockquotes
-    .replace(/<blockquote>(.*?)<\/blockquote>/gs, (match, content) => {
-      const lines = content.trim().split('\n');
-      return lines.map((line: string) => '> ' + line).join('\n') + '\n\n';
-    })
-    // Convert lists
-    .replace(/<ul>(.*?)<\/ul>/gs, '$1\n')
-    .replace(/<ol>(.*?)<\/ol>/gs, '$1\n')
-    .replace(/<li>(.*?)<\/li>/g, '- $1\n')
-    // Convert images (do this before removing other tags)
-    .replace(/<img[^>]+src="([^"]+)"[^>]*>/g, '![]($1)\n\n')
-    .replace(/<img[^>]+src='([^']+)'[^>]*>/g, '![]($1)\n\n')
-    // Convert regular paragraphs (do this after other conversions)
-    .replace(/<p>(.*?)<\/p>/gs, '$1\n\n')
-    // Remove any remaining HTML tags
-    .replace(/<[^>]+>/g, '')
-    // Decode HTML entities
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    // Clean up excessive newlines but preserve intentional spacing
-    .replace(/\n{4,}/g, '\n\n\n')
-    .trim();
-  
-  return markdown;
-};
+
 
 /**
  * Generate markdown content with frontmatter
@@ -528,6 +482,8 @@ export const fetchAllStories = async (): Promise<Story[]> => {
   }
 };
 
+
+
 /**
  * Parse markdown content into Story object
  */
@@ -553,24 +509,8 @@ const parseMarkdown = (content: string, path: string): Story | null => {
       }
     });
 
-    // Handle media list specifically if needed, but simple parsing for now
-    // If media is a list, the above split might fail or capture just the first line
-    // A more robust parser would be better but this suffices for the generated format
-
-    // Convert markdown body back to HTML (simplified)
-    const htmlContent = body
-      .split('\n\n')
-      .map(p => p.trim())
-      .filter(p => p)
-      .map(p => {
-        if (p.startsWith('# ')) return `<h1>${p.slice(2)}</h1>`;
-        if (p.startsWith('## ')) return `<h2>${p.slice(3)}</h2>`;
-        if (p.startsWith('### ')) return `<h3>${p.slice(4)}</h3>`;
-        if (p.startsWith('- ')) return `<ul>${p.split('\n').map(li => `<li>${li.slice(2)}</li>`).join('')}</ul>`;
-        if (p.startsWith('> ')) return `<blockquote>${p.slice(2)}</blockquote>`;
-        return `<p>${p}</p>`;
-      })
-      .join('');
+    // Convert markdown body back to HTML
+    const htmlContent = markdownToHtml(body);
 
     return {
       id: path.replace('stories/', '').replace('.md', ''),
