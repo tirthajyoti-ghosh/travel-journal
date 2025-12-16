@@ -87,9 +87,9 @@ app.post('/media/upload-url', authenticateRequest, async (req: Request, res: Res
       return;
     }
 
-    const bucket = process.env.AWS_S3_BUCKET;
+    const bucket = process.env.NOMOSCRIBE_AWS_S3_BUCKET;
     if (!bucket) {
-      console.error('AWS_S3_BUCKET not configured');
+      console.error('NOMOSCRIBE_AWS_S3_BUCKET not configured');
       const response: ErrorResponse = {
         error: 'Server configuration error',
         message: 'Server configuration error',

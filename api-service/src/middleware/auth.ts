@@ -50,9 +50,9 @@ export function authenticateRequest(req: Request, res: Response, next: NextFunct
   }
 
   // Compute expected signature
-  const appSecret = process.env.APP_SECRET;
+  const appSecret = process.env.NOMOSCRIBE_APP_SECRET;
   if (!appSecret) {
-    console.error('APP_SECRET not configured');
+    console.error('NOMOSCRIBE_APP_SECRET not configured');
     res.status(500).json({
       error: 'Server configuration error'
     });
