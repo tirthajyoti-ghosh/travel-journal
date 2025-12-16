@@ -7,6 +7,7 @@ import { typography } from '@/theme/typography';
 import Feather from '@expo/vector-icons/Feather';
 import * as githubService from '@/services/githubService';
 import * as storageService from '@/services/storageService';
+import * as mediaUploadService from '@/services/mediaUploadService';
 import { GitHubConfig } from '@/types';
 import { GITHUB_OWNER, GITHUB_REPO } from '@/constants/github';
 
@@ -20,8 +21,10 @@ import { GITHUB_OWNER, GITHUB_REPO } from '@/constants/github';
 
 export default function SettingsScreen() {
   const [token, setToken] = useState('');
+  const [appSecret, setAppSecret] = useState('');
   const [loading, setLoading] = useState(false);
-  const [testing, setTesting] = useState(false);
+  const [hasAppSecret, setHasAppSecret] = useState(false);
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const targetBranch = githubService.getTargetBranch();
 
@@ -34,60 +37,74 @@ export default function SettingsScreen() {
     if (config) {
       setToken(config.token);
     }
+
+    const secretExists = await mediaUploadService.hasAppSecret();
+    setHasAppSecret(secretExists);
+    if (secretExists) {
+      // Don't show the actual secret, just indicate it's configured
+      setAppSecret('••••••••••••••••••••••••••••••••');
+    }
   };
 
-  const handleSave = async () => {
-    if (!token.trim()) {
-      Alert.alert('Missing Information', 'Please enter your GitHub token');
-      return;
-    }
+  const autoSaveToken = async (newToken: string) => {
+    if (!newToken.trim()) return;
 
-    setLoading(true);
     try {
       const config: GitHubConfig = {
-        token: token.trim(),
+        token: newToken.trim(),
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
         branch: targetBranch,
       };
 
       await githubService.saveGitHubConfig(config);
-      Alert.alert('Success', 'GitHub configuration saved!');
     } catch (error) {
-      console.error('Failed to save config:', error);
-      Alert.alert('Error', 'Failed to save configuration');
-    } finally {
-      setLoading(false);
+      console.error('Failed to save token:', error);
     }
   };
 
-  const handleTest = async () => {
-    if (!token.trim()) {
-      Alert.alert('Missing Information', 'Please enter your GitHub token first');
-      return;
-    }
+  const autoSaveAppSecret = async (newSecret: string) => {
+    // Don't save if it's the masked placeholder
+    if (!newSecret.trim() || newSecret.startsWith('••••')) return;
 
-    setTesting(true);
     try {
-      const config: GitHubConfig = {
-        token: token.trim(),
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        branch: targetBranch,
-      };
-
-      const success = await githubService.testGitHubConnection(config);
-      
-      if (success) {
-        Alert.alert('Success', 'Connection to GitHub successful! ✓');
-      } else {
-        Alert.alert('Failed', 'Could not connect to repository. Please check your token and repository details.');
-      }
+      await mediaUploadService.storeAppSecret(newSecret.trim());
+      setHasAppSecret(true);
     } catch (error) {
-      Alert.alert('Error', 'Failed to test connection');
-    } finally {
-      setTesting(false);
+      console.error('Failed to save app secret:', error);
     }
+  };
+
+  const handleTokenChange = (newToken: string) => {
+    setToken(newToken);
+    
+    // Clear existing timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    
+    // Set new timeout for auto-save (debounce)
+    const timeout = setTimeout(() => {
+      autoSaveToken(newToken);
+    }, 1000);
+    
+    setSaveTimeout(timeout);
+  };
+
+  const handleAppSecretChange = (newSecret: string) => {
+    setAppSecret(newSecret);
+    
+    // Clear existing timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    
+    // Set new timeout for auto-save (debounce)
+    const timeout = setTimeout(() => {
+      autoSaveAppSecret(newSecret);
+    }, 1000);
+    
+    setSaveTimeout(timeout);
   };
 
   const handleClearCache = () => {
@@ -176,43 +193,52 @@ export default function SettingsScreen() {
               placeholder="github_pat_..."
               placeholderTextColor={colors.lines}
               value={token}
-              onChangeText={setToken}
+              onChangeText={handleTokenChange}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
             />
             <Text style={styles.hint}>
-              Fine-grained token with Contents read/write permission
+              Fine-grained token with Contents read/write permission. Saves automatically.
             </Text>
           </View>
 
-          <View style={styles.buttonGroup}>
-            <TouchableOpacity 
-              style={[styles.testButton, testing && styles.buttonDisabled]}
-              onPress={handleTest}
-              disabled={testing}
-            >
-              <Feather name="wifi" size={20} color={colors.text} />
-              <Text style={styles.testButtonText}>
-                {testing ? 'Testing...' : 'Test Connection'}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Media Upload Configuration</Text>
+            <Text style={styles.sectionDescription}>
+              Required for uploading photos and videos
+            </Text>
+          </View>
 
-            <TouchableOpacity 
-              style={[styles.saveButton, loading && styles.buttonDisabled]}
-              onPress={handleSave}
-              disabled={loading}
-            >
-              <Text style={styles.saveButtonText}>
-                {loading ? 'Saving...' : 'Save Configuration'}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>App Secret *</Text>
+              {hasAppSecret && (
+                <View style={styles.configuredBadge}>
+                  <Feather name="check-circle" size={14} color="#4CAF50" />
+                  <Text style={styles.configuredText}>Configured</Text>
+                </View>
+              )}
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter app secret for media uploads..."
+              placeholderTextColor={colors.lines}
+              value={appSecret}
+              onChangeText={handleAppSecretChange}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Text style={styles.hint}>
+              Secret key for authenticating media uploads to S3. Saves automatically.
+            </Text>
           </View>
 
           <View style={styles.infoBox}>
             <Feather name="info" size={16} color={colors.accent} />
             <Text style={styles.infoText}>
-              Your token is stored securely on your device and never shared.
+              Your credentials are saved automatically and stored securely on your device.
             </Text>
           </View>
 
@@ -328,11 +354,31 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 20,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   label: {
     fontFamily: typography.fonts.ui,
     fontSize: 14,
     color: colors.text,
-    marginBottom: 8,
+    fontWeight: '600',
+  },
+  configuredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#4CAF50' + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  configuredText: {
+    fontFamily: typography.fonts.ui,
+    fontSize: 11,
+    color: '#4CAF50',
     fontWeight: '600',
   },
   input: {
@@ -352,43 +398,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     opacity: 0.6,
     marginTop: 4,
-  },
-  buttonGroup: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  testButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.white,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.accent,
-  },
-  testButtonText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 16,
-    color: colors.text,
-  },
-  saveButton: {
-    backgroundColor: colors.accent,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 16,
-    color: colors.white,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
   },
   infoBox: {
     flexDirection: 'row',

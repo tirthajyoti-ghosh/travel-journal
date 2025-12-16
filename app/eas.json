@@ -6,19 +6,30 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://travel-journal-lyart-kappa.vercel.app",
+        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net",
+        "EXPO_PUBLIC_APP_SECRET_KEY": "@nomoscribe:app_secret"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://travel-journal-lyart-kappa.vercel.app",
+        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_API_BASE_URL": "https://travel-journal-lyart-kappa.vercel.app",
+        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net"
       },
       "android": {
         "buildType": "apk"
@@ -33,6 +44,10 @@
     "local-production": {
       "extends": "production",
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://travel-journal-lyart-kappa.vercel.app",
+        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net"
+      },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"

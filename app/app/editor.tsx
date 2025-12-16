@@ -9,7 +9,6 @@ import * as storageService from '@/services/storageService';
 import * as githubService from '@/services/githubService';
 import { Story } from '@/types';
 import { MediaPicker } from '@/components/MediaPicker';
-import { AlbumPhotoBrowser } from '@/components/AlbumPhotoBrowser';
 import { DottedBackground } from '@/components/DottedBackground';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { useLocation } from '@/hooks/use-location';
@@ -23,21 +22,25 @@ import {
   type ToolbarItem,
 } from '@10play/tentap-editor';
 
+interface UploadState {
+  id: string;
+  percentage: number;
+  error?: string;
+}
+
 export default function EditorScreen() {
   const { storyId } = useLocalSearchParams<{ storyId?: string }>();
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
-  const [albumShareUrl, setAlbumShareUrl] = useState<string | undefined>();
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [editorReady, setEditorReady] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [loadedStory, setLoadedStory] = useState<Story | null>(null);
+  const [activeUploads, setActiveUploads] = useState<Map<string, UploadState>>(new Map());
   const { isOffline } = useNetworkStatus();
   const { location: detectedLocation, loading: detectingLocation, error: locationError, detectLocation } = useLocation();
-
-  const ALBUM_URL_KEY = '@travel_journal:google_photos_album_url';
 
   // Custom CSS for cozy notebook aesthetic
   const customEditorCSS = `
@@ -97,6 +100,29 @@ export default function EditorScreen() {
     p img {
       margin: 0.5em auto 1em auto;
     }
+    /* Upload placeholder styling */
+    p:has-text("[Uploading") {
+      background-color: ${colors.accent}15;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border-left: 3px solid ${colors.accent};
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      color: ${colors.accent};
+      font-weight: 500;
+      margin: 1em 0;
+    }
+    p:has-text("[Upload failed") {
+      background-color: #EF635115;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border-left: 3px solid #EF6351;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      color: #EF6351;
+      font-weight: 500;
+      margin: 1em 0;
+    }
   `;
 
   const editor = useEditorBridge({
@@ -133,11 +159,9 @@ export default function EditorScreen() {
   useEffect(() => {
     if (storyId) {
       loadStory();
-    } else {
-      loadStoredAlbumUrl();
-      // Don't auto-detect on mount to avoid permission prompts
-      // User can manually trigger detection with the button
     }
+    // Don't auto-detect location on mount to avoid permission prompts
+    // User can manually trigger detection with the button
 
     const keyboardWillShow = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
@@ -168,17 +192,6 @@ export default function EditorScreen() {
     }
   }, [editorReady, storyId]);
 
-  const loadStoredAlbumUrl = async () => {
-    try {
-      const stored = await storageService.getData(ALBUM_URL_KEY);
-      if (stored) {
-        setAlbumShareUrl(stored);
-      }
-    } catch (error) {
-      console.error('Error loading album URL:', error);
-    }
-  };
-
   const loadStory = async () => {
     if (!storyId) return;
     try {
@@ -188,7 +201,6 @@ export default function EditorScreen() {
         setTitle(story.title);
         // Filter out legacy "Unknown Location" values
         setLocation(story.location === 'Unknown Location' ? '' : story.location);
-        setAlbumShareUrl(story.albumShareUrl);
         // Set editor content
         if (story.content) {
           editor.setContent(story.content);
@@ -220,9 +232,7 @@ export default function EditorScreen() {
         content: content,
         location: location.trim(),
         isDraft: true,
-        albumShareUrl,
       });
-
       // Try to save to GitHub if online and configured
       if (!isOffline) {
         const isConfigured = await githubService.isGitHubConfigured();
@@ -307,7 +317,6 @@ export default function EditorScreen() {
         location: location.trim(),
         date: storyDate,
         isDraft: false,
-        albumShareUrl,
         images: [],
         createdAt: loadedStory?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -341,20 +350,79 @@ export default function EditorScreen() {
     }
   };
 
-  const handleMediaSelected = (shareUrl: string) => {
-    setAlbumShareUrl(shareUrl);
-    storageService.saveData(ALBUM_URL_KEY, shareUrl);
+  const handleUploadStart = async (placeholderId: string) => {
+    // Insert placeholder text immediately
+    const placeholderText = `[Uploading image... 0%]`;
+    const currentContent = await editor.getHTML();
+    editor.setContent(currentContent + `<p>${placeholderText}</p>`);
+    
+    // Track upload state
+    setActiveUploads(prev => new Map(prev).set(placeholderId, { id: placeholderId, percentage: 0 }));
+    
+    // Close modal so user can see the placeholder
+    setShowMediaPicker(false);
   };
 
-  const handlePhotoInsert = async (photoUrl: string) => {
-    // Insert image into the rich text editor
-    editor.setImage(photoUrl);
-    // Add two empty lines after the image for better cursor navigation
-    await new Promise(resolve => setTimeout(resolve, 150));
-    const currentContent = await editor.getHTML();
-    editor.setContent(currentContent + '<p><br></p><p><br></p>');
+  const handleUploadProgress = (placeholderId: string, percentage: number) => {
+    setActiveUploads(prev => {
+      const newMap = new Map(prev);
+      const upload = newMap.get(placeholderId);
+      if (upload) {
+        newMap.set(placeholderId, { ...upload, percentage });
+        
+        // Update placeholder text in editor
+        (async () => {
+          const content = await editor.getHTML();
+          const updatedContent = content.replace(
+            /\[Uploading image\.\.\. \d+%\]/,
+            `[Uploading image... ${percentage}%]`
+          );
+          if (content !== updatedContent) {
+            editor.setContent(updatedContent);
+          }
+        })();
+      }
+      return newMap;
+    });
+  };
+
+  const handleUploadComplete = async (placeholderId: string, cdnUrl: string) => {
+    // Replace placeholder with actual image
+    const content = await editor.getHTML();
+    const updatedContent = content.replace(
+      /\[Uploading image\.\.\. \d+%\]/,
+      `<img src="${cdnUrl}" />`
+    );
+    editor.setContent(updatedContent);
+    
+    // Remove from active uploads
+    setActiveUploads(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(placeholderId);
+      return newMap;
+    });
+  };
+
+  const handleUploadError = async (placeholderId: string, error: string) => {
+    // Replace placeholder with error message
+    const content = await editor.getHTML();
+    const updatedContent = content.replace(
+      /\[Uploading image\.\.\. \d+%\]/,
+      `[Upload failed: ${error}]`
+    );
+    editor.setContent(updatedContent);
+    
+    // Remove from active uploads
+    setActiveUploads(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(placeholderId);
+      return newMap;
+    });
+  };
+
+  const handlePhotoInsert = (photoUrl: string) => {
+    // This is called as final callback, can be used for additional logic if needed
     editor.focus();
-    setShowMediaPicker(false);
   };
 
   // Custom toolbar items with image picker button
@@ -483,32 +551,26 @@ export default function EditorScreen() {
       <Modal
         visible={showMediaPicker}
         animationType="slide"
-        presentationStyle="fullScreen"
+        presentationStyle="pageSheet"
         onRequestClose={() => setShowMediaPicker(false)}
       >
-        {albumShareUrl ? (
-          <AlbumPhotoBrowser
-            albumShareUrl={albumShareUrl}
-            onClose={() => setShowMediaPicker(false)}
-            onPhotoSelect={handlePhotoInsert}
-          />
-        ) : (
-          <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Link Album First</Text>
-              <TouchableOpacity onPress={() => setShowMediaPicker(false)}>
-                <Feather name="x" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.modalContent}>
-              <MediaPicker 
-                onMediaSelected={handleMediaSelected}
-                onPhotoInsert={handlePhotoInsert}
-                initialAlbumUrl={albumShareUrl}
-              />
-            </View>
-          </SafeAreaView>
-        )}
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Upload Media</Text>
+            <TouchableOpacity onPress={() => setShowMediaPicker(false)}>
+              <Feather name="x" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.modalContent}>
+            <MediaPicker 
+              onMediaUpload={handlePhotoInsert}
+              onUploadStart={handleUploadStart}
+              onUploadProgress={handleUploadProgress}
+              onUploadComplete={handleUploadComplete}
+              onUploadError={handleUploadError}
+            />
+          </View>
+        </SafeAreaView>
       </Modal>
     </View>
   );

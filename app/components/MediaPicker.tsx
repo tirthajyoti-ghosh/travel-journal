@@ -1,177 +1,142 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import * as storageService from '@/services/storageService';
-import { AlbumPhotoBrowser } from './AlbumPhotoBrowser';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
+import { useMediaUpload } from '@/hooks/use-media-upload';
 
 interface MediaPickerProps {
-  onMediaSelected: (albumShareUrl: string) => void;
-  onPhotoInsert?: (photoUrl: string) => void;
-  initialAlbumUrl?: string;
+  onMediaUpload: (cdnUrl: string) => void;
+  onUploadStart?: (placeholderId: string) => void | Promise<void>;
+  onUploadProgress?: (placeholderId: string, percentage: number) => void;
+  onUploadComplete?: (placeholderId: string, cdnUrl: string) => void | Promise<void>;
+  onUploadError?: (placeholderId: string, error: string) => void;
 }
 
-const ALBUM_URL_KEY = '@travel_journal:google_photos_album_url';
+export function MediaPicker({ 
+  onMediaUpload,
+  onUploadStart,
+  onUploadProgress,
+  onUploadComplete,
+  onUploadError 
+}: MediaPickerProps) {
+  const { isUploading, progress, uploadMedia, reset: resetUpload } = useMediaUpload();
 
-export function MediaPicker({ onMediaSelected, onPhotoInsert, initialAlbumUrl }: MediaPickerProps) {
-  const [albumUrl, setAlbumUrl] = useState<string>(initialAlbumUrl || '');
-  const [inputUrl, setInputUrl] = useState<string>('');
-  const [showBrowser, setShowBrowser] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const requestPermissions = async () => {
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant media library access to upload photos.');
+        return false;
+      }
+    }
+    return true;
+  };
 
-  useEffect(() => {
-    loadStoredAlbumUrl();
-  }, []);
+  const handlePickImage = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
 
-  const loadStoredAlbumUrl = async () => {
     try {
-      if (initialAlbumUrl) {
-        setAlbumUrl(initialAlbumUrl);
-        setLoading(false);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        allowsEditing: false,
+        quality: 0.9,
+        allowsMultipleSelection: false,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        await handleUploadMedia(asset.uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant camera access to take photos.');
         return;
       }
-
-      const stored = await storageService.getData(ALBUM_URL_KEY);
-      if (stored) {
-        setAlbumUrl(stored);
-      }
-    } catch (error) {
-      console.error('Error loading album URL:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSaveUrl = async () => {
-    const trimmedUrl = inputUrl.trim();
-    
-    if (!trimmedUrl) {
-      Alert.alert('Error', 'Please enter a valid Google Photos album URL');
-      return;
-    }
-
-    // Basic validation for Google Photos URL
-    if (!trimmedUrl.includes('photos.google.com') && !trimmedUrl.includes('photos.app.goo.gl')) {
-      Alert.alert('Error', 'Please enter a valid Google Photos share URL');
-      return;
     }
 
     try {
-      setAlbumUrl(trimmedUrl);
-      await storageService.saveData(ALBUM_URL_KEY, trimmedUrl);
-      onMediaSelected(trimmedUrl);
-      setIsEditing(false);
-      setInputUrl('');
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.9,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        await handleUploadMedia(asset.uri);
+      }
     } catch (error) {
-      console.error('Error saving album URL:', error);
-      Alert.alert('Error', 'Failed to save album URL. Please try again.');
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
 
-  const handleEditUrl = () => {
-    setInputUrl(albumUrl);
-    setIsEditing(true);
-  };
-
-  const handleOpenBrowser = () => {
-    setShowBrowser(true);
-  };
-
-  const handleCloseBrowser = () => {
-    setShowBrowser(false);
-  };
-
-  const handlePhotoSelect = (photoUrl: string) => {
-    if (onPhotoInsert) {
-      onPhotoInsert(photoUrl);
+  const handleUploadMedia = async (uri: string) => {
+    // Generate unique placeholder ID
+    const placeholderId = `upload_${Date.now()}`;
+    
+    // Notify upload start (await in case it's async)
+    await onUploadStart?.(placeholderId);
+    
+    // Import the upload service directly to get progress callbacks
+    const { uploadMedia: directUpload } = await import('@/services/mediaUploadService');
+    
+    // Perform upload with progress tracking
+    const result = await directUpload(uri, (prog) => {
+      onUploadProgress?.(placeholderId, prog.percentage);
+    });
+    
+    if (result.success) {
+      onUploadComplete?.(placeholderId, result.cdnUrl);
+      onMediaUpload(result.cdnUrl);
+    } else {
+      onUploadError?.(placeholderId, result.error || 'Upload failed');
+      Alert.alert('Upload Failed', result.error || 'Failed to upload media. Please try again.');
     }
-    // Optionally close browser after inserting photo
-    // setShowBrowser(false);
   };
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="small" color={colors.accent} />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
-  if (isEditing || !albumUrl) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.label}>Google Photos Album URL</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="https://photos.app.goo.gl/xxxxx"
-          placeholderTextColor={colors.text + '60'}
-          value={inputUrl}
-          onChangeText={setInputUrl}
-          autoCapitalize="none"
-          autoCorrect={false}
-          multiline
-        />
-        <Text style={styles.helperText}>
-          Create a shared album in Google Photos and paste the share link here
-        </Text>
-        <View style={styles.buttonRow}>
-          {albumUrl && (
-            <TouchableOpacity 
-              style={[styles.button, styles.secondaryButton]} 
-              onPress={() => {
-                setIsEditing(false);
-                setInputUrl('');
-              }}
-            >
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity 
-            style={[styles.button, styles.primaryButton]} 
-            onPress={handleSaveUrl}
-          >
-            <Feather name="save" size={16} color={colors.white} />
-            <Text style={styles.buttonText}>Save Album</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
-      {showBrowser && albumUrl && (
-        <Modal
-          visible={showBrowser}
-          animationType="slide"
-          presentationStyle="fullScreen"
-          onRequestClose={handleCloseBrowser}
-        >
-          <AlbumPhotoBrowser
-            albumShareUrl={albumUrl}
-            onClose={handleCloseBrowser}
-            onPhotoSelect={handlePhotoSelect}
-          />
-        </Modal>
+      <Text style={styles.sectionLabel}>Upload Media</Text>
+      {isUploading ? (
+        <View style={styles.uploadProgress}>
+          <ActivityIndicator size="small" color={colors.accent} />
+          <Text style={styles.progressText}>
+            {progress ? `Uploading... ${progress.percentage}%` : 'Preparing upload...'}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.buttonRow}>
+          <TouchableOpacity 
+            style={[styles.button, styles.primaryButton]} 
+            onPress={handlePickImage}
+          >
+            <Feather name="image" size={16} color={colors.white} />
+            <Text style={styles.buttonText}>Pick Photo</Text>
+          </TouchableOpacity>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity 
+              style={[styles.button, styles.primaryButton]} 
+              onPress={handleTakePhoto}
+            >
+              <Feather name="camera" size={16} color={colors.white} />
+              <Text style={styles.buttonText}>Take Photo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
-      
-      <View style={styles.albumInfo}>
-        <Feather name="image" size={20} color={colors.accent} />
-        <Text style={styles.albumText} numberOfLines={1}>Album linked</Text>
-      </View>
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={handleEditUrl}>
-          <Feather name="edit-2" size={16} color={colors.accent} />
-          <Text style={styles.secondaryButtonText}>Change</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={handleOpenBrowser}>
-          <Feather name="eye" size={16} color={colors.white} />
-          <Text style={styles.buttonText}>View Photos</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -179,7 +144,17 @@ export function MediaPicker({ onMediaSelected, onPhotoInsert, initialAlbumUrl }:
 const styles = StyleSheet.create({
   container: {
     paddingVertical: 12,
+    gap: 16,
+  },
+  section: {
     gap: 12,
+  },
+  sectionLabel: {
+    color: colors.text,
+    fontFamily: typography.fonts.ui,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   label: {
     color: colors.text,
@@ -187,6 +162,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  uploadProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  progressText: {
+    color: colors.text,
+    fontFamily: typography.fonts.ui,
+    fontSize: 14,
   },
   input: {
     backgroundColor: colors.background,

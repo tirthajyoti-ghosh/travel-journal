@@ -200,15 +200,32 @@ export const publishStory = async (story: Story): Promise<PublishResult> => {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('GitHub API Error:', error);
+      let errorMessage = 'Failed to publish to GitHub';
+      try {
+        const error = await response.json();
+        errorMessage = error.message || errorMessage;
+        console.error('GitHub API Error:', error);
+      } catch (parseError) {
+        console.error('GitHub API Error (non-JSON):', response.status, response.statusText);
+        errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
+      }
       return {
         success: false,
-        error: error.message || 'Failed to publish to GitHub',
+        error: errorMessage,
       };
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse GitHub API response:', parseError);
+      return {
+        success: true,
+        path: path,
+        url: undefined,
+      };
+    }
     
     return {
       success: true,
@@ -313,15 +330,32 @@ export const archiveStory = async (story: Story): Promise<PublishResult> => {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('GitHub API Error:', error);
+      let errorMessage = 'Failed to archive on GitHub';
+      try {
+        const error = await response.json();
+        errorMessage = error.message || errorMessage;
+        console.error('GitHub API Error:', error);
+      } catch (parseError) {
+        console.error('GitHub API Error (non-JSON):', response.status, response.statusText);
+        errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
+      }
       return {
         success: false,
-        error: error.message || 'Failed to archive on GitHub',
+        error: errorMessage,
       };
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse GitHub API response:', parseError);
+      return {
+        success: true,
+        path: story.githubPath,
+        url: undefined,
+      };
+    }
 
     return {
       success: true,
@@ -404,15 +438,32 @@ export const unarchiveStory = async (story: Story): Promise<PublishResult> => {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('GitHub API Error:', error);
+      let errorMessage = 'Failed to unarchive on GitHub';
+      try {
+        const error = await response.json();
+        errorMessage = error.message || errorMessage;
+        console.error('GitHub API Error:', error);
+      } catch (parseError) {
+        console.error('GitHub API Error (non-JSON):', response.status, response.statusText);
+        errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
+      }
       return {
         success: false,
-        error: error.message || 'Failed to unarchive on GitHub',
+        error: errorMessage,
       };
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse GitHub API response:', parseError);
+      return {
+        success: true,
+        path: story.githubPath,
+        url: undefined,
+      };
+    }
 
     return {
       success: true,
@@ -610,15 +661,34 @@ export const saveDraft = async (story: Story): Promise<PublishResult> => {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('GitHub API Error:', error);
+      let errorMessage = 'Failed to save draft to GitHub';
+      try {
+        const error = await response.json();
+        errorMessage = error.message || errorMessage;
+        console.error('GitHub API Error:', error);
+      } catch (parseError) {
+        // Response might be empty or not JSON
+        console.error('GitHub API Error (non-JSON):', response.status, response.statusText);
+        errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
+      }
       return {
         success: false,
-        error: error.message || 'Failed to save draft to GitHub',
+        error: errorMessage,
       };
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse GitHub API response:', parseError);
+      // Even if parsing fails, the request succeeded (response.ok was true)
+      return {
+        success: true,
+        path: path,
+        url: undefined,
+      };
+    }
     
     return {
       success: true,
