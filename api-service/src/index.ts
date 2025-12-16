@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
+import crypto from 'crypto';
 import { authenticateRequest } from './middleware/auth.js';
 import { generatePresignedUploadUrl } from './services/s3.js';
 
@@ -98,8 +99,12 @@ app.post('/media/upload-url', authenticateRequest, async (req: Request, res: Res
       return;
     }
 
-    // Use original filename directly (no collision detection)
-    const objectKey = filename;
+    // Append 8-char random hex to ensure uniqueness
+    const randomHex = crypto.randomBytes(4).toString('hex'); // 4 bytes = 8 hex chars
+    const nameParts = filename.split('.');
+    const extension = nameParts.pop();
+    const baseName = nameParts.join('.');
+    const objectKey = extension ? `${baseName}_${randomHex}.${extension}` : `${filename}_${randomHex}`;
 
     // Generate presigned upload URL
     const uploadUrl = await generatePresignedUploadUrl(bucket, objectKey, contentType);
