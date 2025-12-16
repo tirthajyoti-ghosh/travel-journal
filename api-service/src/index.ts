@@ -1,0 +1,140 @@
+import 'dotenv/config';
+import express, { Request, Response } from 'express';
+import { authenticateRequest } from './middleware/auth.js';
+import { generatePresignedUploadUrl } from './services/s3.js';
+
+const app = express();
+app.use(express.json());
+
+interface UploadUrlRequest {
+  filename: string;
+  contentType: string;
+}
+
+interface UploadUrlResponse {
+  objectKey: string;
+  uploadUrl: string;
+}
+
+interface ErrorResponse {
+  error: string;
+  message: string;
+}
+
+// Health check endpoint (no auth required)
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', service: 'nomoscribe-media-api' });
+});
+
+/**
+ * POST /media/upload-url
+ * 
+ * Generate a presigned S3 upload URL for media files
+ * 
+ * Request body:
+ * {
+ *   "filename": "IMG_20250321_181233.jpg",
+ *   "contentType": "image/jpeg"
+ * }
+ * 
+ * Response:
+ * {
+ *   "objectKey": "IMG_20250321_181233.jpg",
+ *   "uploadUrl": "https://s3-presigned-url..."
+ * }
+ */
+app.post('/media/upload-url', authenticateRequest, async (req: Request, res: Response) => {
+  try {
+    const { filename, contentType } = req.body as UploadUrlRequest;
+
+    // Validate input
+    if (!filename || !contentType) {
+      const response: ErrorResponse = {
+        error: 'Bad Request',
+        message: 'filename and contentType are required',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // Validate filename format (basic validation)
+    if (typeof filename !== 'string' || filename.length === 0 || filename.length > 255) {
+      const response: ErrorResponse = {
+        error: 'Bad Request',
+        message: 'Invalid filename',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // Validate content type
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/heic',
+      'image/heif',
+      'video/mp4',
+      'video/quicktime',
+    ];
+
+    if (!allowedTypes.includes(contentType.toLowerCase())) {
+      const response: ErrorResponse = {
+        error: 'Bad Request',
+        message: 'Unsupported content type',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const bucket = process.env.AWS_S3_BUCKET;
+    if (!bucket) {
+      console.error('AWS_S3_BUCKET not configured');
+      const response: ErrorResponse = {
+        error: 'Server configuration error',
+        message: 'Server configuration error',
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    // Use original filename directly (no collision detection)
+    const objectKey = filename;
+
+    // Generate presigned upload URL
+    const uploadUrl = await generatePresignedUploadUrl(bucket, objectKey, contentType);
+
+    // Return response
+    const response: UploadUrlResponse = {
+      objectKey,
+      uploadUrl,
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('Error generating upload URL:', error);
+    const response: ErrorResponse = {
+      error: 'Internal Server Error',
+      message: 'Failed to generate upload URL',
+    };
+    res.status(500).json(response);
+  }
+});
+
+// 404 handler
+app.use((_req: Request, res: Response) => {
+  const response: ErrorResponse = {
+    error: 'Not Found',
+    message: 'Endpoint not found',
+  };
+  res.status(404).json(response);
+});
+
+// Start server (only if not in Vercel serverless environment)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`API server running on port ${PORT}`);
+  });
+}
+
+export default app;

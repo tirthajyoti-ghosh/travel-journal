@@ -1,3 +1,4 @@
 node_modules/
 /stories/
 .DS_Store
+.env

@@ -10,7 +10,25 @@ Provide a **simple, reliable, long-term media storage system** for a personal tr
 * Works well for photos + videos
 * Is cheap, scalable, and future-proof
 
-This system is **write-only from the mobile app** and **read-only from the web app**.
+This system is **write-only from the mobile app** and **read-only from both the mobile app and the web app via CDN URLs**.
+
+---
+
+## Core Principle (Important)
+
+> **Media becomes real the moment it is uploaded.**
+
+* Media is uploaded immediately during writing
+* A **final CloudFront CDN URL** is generated
+* That URL is embedded directly into the story
+* The **same URL** is used for:
+
+  * drafts
+  * editing
+  * previews
+  * published stories
+
+There is no temporary or placeholder media state.
 
 ---
 
@@ -22,6 +40,7 @@ This system is **write-only from the mobile app** and **read-only from the web a
 * ❌ No folder hierarchy / nesting
 * ❌ No transcoding or media processing pipeline
 * ❌ No user auth / multi-user support
+* ❌ No gallery or bulk media management UI
 
 ---
 
@@ -37,7 +56,7 @@ Android App
         ↓
    CloudFront CDN
         ↓
-     Public Web App
+ Mobile App (read) + Public Web App (read)
 ```
 
 ---
@@ -87,18 +106,46 @@ This is handled automatically by the API.
 
 ### What the app does
 
-* Selects media from device storage
-* Reads original filename
+* Inline media selection while writing (Expo Media Picker)
+* Reads original filename from device
 * Requests a presigned upload URL
 * Uploads file **directly to S3**
-* Stores the returned object key inside the story markdown
+* Receives final object key
+* Computes final CDN URL
+* **Embeds the CDN URL directly into the story content**
+* Renders images and video thumbnails inside the editor and drafts
 
 ### What the app does NOT do
 
 * ❌ Play videos
-* ❌ Store metadata
+* ❌ Store separate media metadata
+* ❌ Maintain a media gallery
 * ❌ Resize or compress media
 * ❌ Authenticate users beyond a shared secret
+
+---
+
+## Inline Media Embedding Model
+
+Media is embedded directly into the story body.
+
+### Image example
+
+```md
+![IMG_20250321_181233](https://cdn.domain/IMG_20250321_181233.jpg)
+```
+
+### Video example
+
+```html
+<video src="https://cdn.domain/VID_20250321_181300.mp4" preload="metadata" />
+```
+
+* Images render inline
+* Videos render as thumbnails/posters
+* Same rendering logic applies to drafts, edits, and published stories
+
+The story file itself is the **single source of truth**.
 
 ---
 
@@ -122,7 +169,7 @@ The API exists only to safely issue presigned URLs.
 1. Check if object exists in S3
 2. If exists → generate suffixed filename
 3. Generate presigned PUT URL
-4. Return final object key + URL
+4. Return final object key + upload URL
 
 **Output**
 
@@ -164,9 +211,9 @@ No OAuth. No user system.
 
 ### Media discovery
 
-* Stories reference media **by object key**
-* No S3 listing required for readers
-* No runtime API calls needed
+* Stories reference media **by CDN URL**
+* No S3 listing required
+* No runtime API calls needed for reading
 
 ---
 
@@ -176,6 +223,11 @@ No OAuth. No user system.
 
 * S3 bucket is **private**
 * CloudFront is **public**
+* CloudFront serves:
+
+  * images
+  * video thumbnails
+  * full videos (web only)
 * Signed URLs optional (not required initially)
 * Range requests enabled (default)
 
@@ -183,7 +235,7 @@ No OAuth. No user system.
 
 * Native MP4 streaming
 * Byte-range supported automatically
-* No extra config required
+* No transcoding or manifests required
 
 ---
 
@@ -191,8 +243,8 @@ No OAuth. No user system.
 
 * Filenames encode time
 * Media is immutable
-* Stories already store references
-* Sorting and filtering can be done client-side
+* Stories already store CDN URLs
+* Drafts and published content use the same references
 * Manual inspection/debugging stays easy
 
 This is intentional.
@@ -204,9 +256,9 @@ This is intentional.
 For a **personal travel journal**:
 
 * Storage: cents per month initially
-* Streaming: pennies unless videos go viral
+* CDN delivery: pennies unless traffic spikes
 * API: negligible
-* CloudFront: free tier covers most usage
+* CloudFront free tier covers early usage
 
 ---
 
@@ -214,11 +266,11 @@ For a **personal travel journal**:
 
 This design allows easy future changes:
 
-* Move to another S3 bucket
-* Add thumbnails later
-* Add signed URLs if needed
+* Add thumbnails later (optional)
+* Add signed URLs if privacy is needed
 * Add EXIF parsing (client-side)
-* Add folder prefixes later (if ever needed)
+* Introduce folder prefixes later (if ever needed)
+* Move buckets or CDNs without touching story content
 
 No lock-in at the data level.
 
@@ -226,15 +278,17 @@ No lock-in at the data level.
 
 ## Final Decisions Summary
 
-| Decision                     | Status |
-| ---------------------------- | ------ |
-| Flat hierarchy               | ✅      |
-| Original filenames preserved | ✅      |
-| No DB                        | ✅      |
-| Mobile uploads only          | ✅      |
-| Web streaming only           | ✅      |
-| Images + videos supported    | ✅      |
-| Simple auth                  | ✅      |
+| Decision                              | Status |
+| ------------------------------------- | ------ |
+| Flat hierarchy                        | ✅      |
+| Original filenames preserved          | ✅      |
+| No DB                                 | ✅      |
+| Inline uploads while writing          | ✅      |
+| CDN URL embedded immediately          | ✅      |
+| Same URL for drafts & published       | ✅      |
+| Mobile shows images & thumbnails only | ✅      |
+| Web streams full videos               | ✅      |
+| Simple shared-secret auth             | ✅      |
 
 ---
 
@@ -245,4 +299,4 @@ Think of S3 as:
 > **A dumb, eternal media drawer**
 > Everything goes in
 > Nothing ever changes
-> Stories simply point to things inside it
+> Stories simply embed URLs that point to it
