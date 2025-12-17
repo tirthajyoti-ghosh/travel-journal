@@ -10,6 +10,7 @@ import * as githubService from '@/services/githubService';
 import { Story } from '@/types';
 import { MediaPicker } from '@/components/MediaPicker';
 import { DottedBackground } from '@/components/DottedBackground';
+import { CityAutocomplete } from '@/components/CityAutocomplete';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { useLocation } from '@/hooks/use-location';
 import { 
@@ -32,6 +33,7 @@ export default function EditorScreen() {
   const { storyId } = useLocalSearchParams<{ storyId?: string }>();
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
+  const [coordinates, setCoordinates] = useState<[number, number] | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -40,7 +42,7 @@ export default function EditorScreen() {
   const [loadedStory, setLoadedStory] = useState<Story | null>(null);
   const [activeUploads, setActiveUploads] = useState<Map<string, UploadState>>(new Map());
   const { isOffline } = useNetworkStatus();
-  const { location: detectedLocation, loading: detectingLocation, error: locationError, detectLocation } = useLocation();
+  const { location: detectedLocation, coordinates: detectedCoordinates, loading: detectingLocation, error: locationError, detectLocation } = useLocation();
 
   // Custom CSS for cozy notebook aesthetic
   const customEditorCSS = `
@@ -182,8 +184,11 @@ export default function EditorScreen() {
   useEffect(() => {
     if (detectedLocation && !location) {
       setLocation(detectedLocation);
+      if (detectedCoordinates) {
+        setCoordinates(detectedCoordinates);
+      }
     }
-  }, [detectedLocation]);
+  }, [detectedLocation, detectedCoordinates]);
 
   // Load story content when editor is ready
   useEffect(() => {
@@ -201,6 +206,7 @@ export default function EditorScreen() {
         setTitle(story.title);
         // Filter out legacy "Unknown Location" values
         setLocation(story.location === 'Unknown Location' ? '' : story.location);
+        setCoordinates(story.coordinates);
         // Set editor content
         if (story.content) {
           editor.setContent(story.content);
@@ -231,6 +237,7 @@ export default function EditorScreen() {
         title: title.trim(),
         content: content,
         location: location.trim(),
+        coordinates: coordinates,
         isDraft: true,
       });
       // Try to save to GitHub if online and configured
@@ -315,6 +322,7 @@ export default function EditorScreen() {
         title: title.trim(),
         content: content,
         location: location.trim(),
+        coordinates: coordinates,
         date: storyDate,
         isDraft: false,
         images: [],
@@ -494,28 +502,18 @@ export default function EditorScreen() {
             onChangeText={setTitle}
             multiline
           />
-          
           <View style={styles.metaContainer}>
-            <View style={styles.locationInputContainer}>
-              <TextInput
-                style={[styles.metaInput, styles.locationInput]}
-                placeholder="Location (e.g., Bangkok, Thailand)"
-                placeholderTextColor={colors.lines}
-                value={location}
-                onChangeText={setLocation}
-              />
-              <TouchableOpacity 
-                style={styles.detectButton}
-                onPress={detectLocation}
-                disabled={detectingLocation}
-              >
-                {detectingLocation ? (
-                  <ActivityIndicator size="small" color={colors.accent} />
-                ) : (
-                  <Feather name="map-pin" size={18} color={colors.accent} />
-                )}
-              </TouchableOpacity>
-            </View>
+            <CityAutocomplete
+              value={location}
+              onLocationSelect={(selectedLocation, selectedCoordinates) => {
+                setLocation(selectedLocation);
+                setCoordinates(selectedCoordinates);
+              }}
+              // onGPSPress={detectLocation}
+              placeholder="Search city..."
+              gpsDetecting={detectingLocation}
+              style={styles.locationInputContainer}
+            />
             {locationError && (
               <Text style={styles.locationError}>{locationError}</Text>
             )}

@@ -15,6 +15,7 @@ import {
   Inter_500Medium 
 } from '@expo-google-fonts/inter';
 import 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -38,13 +39,13 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="editor" />
         <Stack.Screen name="viewer/[id]" />
       </Stack>
       <StatusBar style="dark" />
-    </>
+    </GestureHandlerRootView>
   );
 }

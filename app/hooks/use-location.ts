@@ -1,25 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import * as Location from 'expo-location';
+import { findNearestCity, isSearchServiceReady } from '@/services/citySearchService';
 
 export interface LocationResult {
   location: string | null;
+  coordinates: [number, number] | null;
   loading: boolean;
   error: string | null;
 }
 
 /**
  * Hook to detect current location using GPS
- * Returns formatted location as "City, Country"
+ * Returns formatted location as "City, Country" with coordinates
  */
 export const useLocation = () => {
   const [result, setResult] = useState<LocationResult>({
     location: null,
+    coordinates: null,
     loading: false,
     error: null,
   });
 
   const detectLocation = async () => {
-    setResult({ location: null, loading: true, error: null });
+    setResult({ location: null, coordinates: null, loading: true, error: null });
 
     try {
       // Request foreground permissions
@@ -28,6 +31,7 @@ export const useLocation = () => {
       if (status !== 'granted') {
         setResult({
           location: null,
+          coordinates: null,
           loading: false,
           error: 'Location permission needed',
         });
@@ -52,10 +56,32 @@ export const useLocation = () => {
         }
       });
 
-      // Reverse geocode to get city and country
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      // Try to find nearest city from our database first (if search service is ready)
+      if (isSearchServiceReady()) {
+        try {
+          const nearestCity = await findNearestCity(latitude, longitude, 100);
+          
+          if (nearestCity) {
+            setResult({
+              location: nearestCity.displayName,
+              coordinates: nearestCity.coordinates,
+              loading: false,
+              error: null,
+            });
+            return;
+          }
+        } catch (error) {
+          console.log('City search failed, falling back to reverse geocoding:', error);
+        }
+      }
+
+      // Fallback: Reverse geocode to get city and country
       const [geocode] = await Location.reverseGeocodeAsync({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
+        latitude: latitude,
+        longitude: longitude,
       }).catch(() => {
         // If geocoding fails, we still have coordinates
         throw new Error('Could not identify location');
@@ -69,6 +95,7 @@ export const useLocation = () => {
         if (city && country) {
           setResult({
             location: `${city}, ${country}`,
+            coordinates: [longitude, latitude],
             loading: false,
             error: null,
           });
@@ -76,12 +103,14 @@ export const useLocation = () => {
           // Fallback to whatever we have
           setResult({
             location: city || country || 'Unknown',
+            coordinates: [longitude, latitude],
             loading: false,
             error: null,
           });
         } else {
           setResult({
             location: null,
+            coordinates: null,
             loading: false,
             error: 'Could not identify location',
           });
@@ -89,6 +118,7 @@ export const useLocation = () => {
       } else {
         setResult({
           location: null,
+          coordinates: null,
           loading: false,
           error: 'Could not identify location',
         });
@@ -97,6 +127,7 @@ export const useLocation = () => {
       console.log('Location detection failed:', error);
       setResult({
         location: null,
+        coordinates: null,
         loading: false,
         error: error instanceof Error ? error.message : 'Location unavailable',
       });

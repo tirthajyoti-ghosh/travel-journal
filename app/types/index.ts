@@ -3,6 +3,7 @@ export interface Story {
   title: string;
   date: string;
   location: string;
+  coordinates?: [number, number]; // [longitude, latitude] for map display
   content: string;
   coverImage?: string;
   images: string[];

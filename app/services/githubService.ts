@@ -100,6 +100,7 @@ const generateMarkdown = (story: Story): string => {
 title: "${story.title}"
 date: "${story.date}"
 location: "${story.location}"
+${story.coordinates ? `coordinates: [${story.coordinates[0]}, ${story.coordinates[1]}]` : ''}
 createdAt: "${story.createdAt}"
 updatedAt: "${story.updatedAt}"
 ${story.isDraft ? 'draft: true' : ''}
