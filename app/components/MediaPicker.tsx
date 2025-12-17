@@ -109,7 +109,6 @@ export function MediaPicker({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionLabel}>Upload Media</Text>
       {isUploading ? (
         <View style={styles.uploadProgress}>
           <ActivityIndicator size="small" color={colors.accent} />
@@ -119,14 +118,7 @@ export function MediaPicker({
         </View>
       ) : (
         <View style={styles.buttonRow}>
-          <TouchableOpacity 
-            style={[styles.button, styles.primaryButton]} 
-            onPress={handlePickImage}
-          >
-            <Feather name="image" size={16} color={colors.white} />
-            <Text style={styles.buttonText}>Pick Photo</Text>
-          </TouchableOpacity>
-          {Platform.OS !== 'web' && (
+          {/* {Platform.OS !== 'web' && (
             <TouchableOpacity 
               style={[styles.button, styles.primaryButton]} 
               onPress={handleTakePhoto}
@@ -134,7 +126,14 @@ export function MediaPicker({
               <Feather name="camera" size={16} color={colors.white} />
               <Text style={styles.buttonText}>Take Photo</Text>
             </TouchableOpacity>
-          )}
+          )} */}
+          <TouchableOpacity 
+            style={[styles.button, styles.primaryButton]} 
+            onPress={handlePickImage}
+          >
+            <Feather name="image" size={16} color={colors.white} />
+            <Text style={styles.buttonText}>Pick Photo</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>

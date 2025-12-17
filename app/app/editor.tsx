@@ -551,26 +551,38 @@ export default function EditorScreen() {
       <Modal
         visible={showMediaPicker}
         animationType="slide"
-        presentationStyle="pageSheet"
+        transparent={true}
         onRequestClose={() => setShowMediaPicker(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Upload Media</Text>
-            <TouchableOpacity onPress={() => setShowMediaPicker(false)}>
-              <Feather name="x" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.modalContent}>
-            <MediaPicker 
-              onMediaUpload={handlePhotoInsert}
-              onUploadStart={handleUploadStart}
-              onUploadProgress={handleUploadProgress}
-              onUploadComplete={handleUploadComplete}
-              onUploadError={handleUploadError}
-            />
-          </View>
-        </SafeAreaView>
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMediaPicker(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalBottomSheet}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <SafeAreaView style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Upload Media</Text>
+                <TouchableOpacity onPress={() => setShowMediaPicker(false)}>
+                  <Feather name="x" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.modalContent}>
+                <MediaPicker 
+                  onMediaUpload={handlePhotoInsert}
+                  onUploadStart={handleUploadStart}
+                  onUploadProgress={handleUploadProgress}
+                  onUploadComplete={handleUploadComplete}
+                  onUploadError={handleUploadError}
+                />
+              </View>
+            </SafeAreaView>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -745,27 +757,42 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.accent,
   },
-  modalContainer: {
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalBottomSheet: {
     backgroundColor: colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+    paddingBottom: 8,
+  },
+  modalContainer: {
+    backgroundColor: 'transparent',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.lines,
   },
   modalTitle: {
     fontFamily: typography.fonts.display,
-    fontSize: 24,
+    fontSize: 20,
     color: colors.text,
   },
   modalContent: {
-    flex: 1,
     paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   mediaPickerContainer: {
     paddingVertical: 12,
