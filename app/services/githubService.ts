@@ -10,6 +10,12 @@ const GITHUB_CONFIG_KEY = '@travel_journal:github_config';
  * Environment-based branch targeting:
  * - Development (__DEV__ = true): publishes to 'dev-playground' branch
  * - Production (__DEV__ = false): publishes to 'main' branch
+ * 
+ * Error Handling Strategy:
+ * - 404 errors are handled gracefully (expected when files/directories don't exist)
+ * - API errors are logged with proper context
+ * - Individual failures don't cascade to break entire operations
+ * - User-friendly error messages are returned for all failure cases
  */
 
 export interface PublishResult {
@@ -18,6 +24,24 @@ export interface PublishResult {
   url?: string;
   error?: string;
 }
+
+/**
+ * Helper to handle GitHub API response errors consistently
+ */
+const handleApiError = async (
+  response: Response,
+  context: string
+): Promise<string> => {
+  try {
+    const error = await response.json();
+    const message = error.message || `${context} failed`;
+    console.error(`[GitHub API] ${context}:`, error);
+    return message;
+  } catch (parseError) {
+    console.error(`[GitHub API] ${context} (non-JSON):`, response.status, response.statusText);
+    return `${context} failed: ${response.status} ${response.statusText}`;
+  }
+};
 
 /**
  * Get the target branch based on environment
@@ -116,6 +140,14 @@ const getFileSha = async (
       const data = await response.json();
       return data.sha;
     }
+    
+    // 404 is expected when file doesn't exist
+    if (response.status === 404) {
+      return null;
+    }
+    
+    // Log unexpected errors
+    console.warn('Unexpected error getting file SHA:', response.status, response.statusText);
     return null;
   } catch (error) {
     console.error('Error getting file SHA:', error);
@@ -200,15 +232,7 @@ export const publishStory = async (story: Story): Promise<PublishResult> => {
     );
 
     if (!response.ok) {
-      let errorMessage = 'Failed to publish to GitHub';
-      try {
-        const error = await response.json();
-        errorMessage = error.message || errorMessage;
-        console.error('GitHub API Error:', error);
-      } catch (parseError) {
-        console.error('GitHub API Error (non-JSON):', response.status, response.statusText);
-        errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
-      }
+      const errorMessage = await handleApiError(response, 'Publish story');
       return {
         success: false,
         error: errorMessage,
@@ -255,6 +279,17 @@ export const testGitHubConnection = async (config: GitHubConfig): Promise<boolea
         },
       }
     );
+
+    if (!response.ok) {
+      // Log specific error for debugging
+      if (response.status === 401) {
+        console.warn('GitHub connection failed: Invalid token');
+      } else if (response.status === 404) {
+        console.warn('GitHub connection failed: Repository not found');
+      } else {
+        console.warn('GitHub connection failed:', response.status, response.statusText);
+      }
+    }
 
     return response.ok;
   } catch (error) {
@@ -330,15 +365,7 @@ export const archiveStory = async (story: Story): Promise<PublishResult> => {
     );
 
     if (!response.ok) {
-      let errorMessage = 'Failed to archive on GitHub';
-      try {
-        const error = await response.json();
-        errorMessage = error.message || errorMessage;
-        console.error('GitHub API Error:', error);
-      } catch (parseError) {
-        console.error('GitHub API Error (non-JSON):', response.status, response.statusText);
-        errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
-      }
+      const errorMessage = await handleApiError(response, 'Archive story');
       return {
         success: false,
         error: errorMessage,
@@ -438,15 +465,7 @@ export const unarchiveStory = async (story: Story): Promise<PublishResult> => {
     );
 
     if (!response.ok) {
-      let errorMessage = 'Failed to unarchive on GitHub';
-      try {
-        const error = await response.json();
-        errorMessage = error.message || errorMessage;
-        console.error('GitHub API Error:', error);
-      } catch (parseError) {
-        console.error('GitHub API Error (non-JSON):', response.status, response.statusText);
-        errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
-      }
+      const errorMessage = await handleApiError(response, 'Unarchive story');
       return {
         success: false,
         error: errorMessage,
@@ -503,7 +522,19 @@ export const fetchAllStories = async (): Promise<Story[]> => {
     );
 
     if (!response.ok) {
-      console.error('Failed to list stories:', await response.text());
+      // 404 is expected when stories directory doesn't exist yet
+      if (response.status === 404) {
+        console.log('Stories directory not found, returning empty list');
+        return [];
+      }
+      
+      // For other errors, log the details
+      try {
+        const errorData = await response.json();
+        console.error('Failed to list stories:', errorData);
+      } catch {
+        console.error('Failed to list stories:', response.status, response.statusText);
+      }
       return [];
     }
 
@@ -515,13 +546,20 @@ export const fetchAllStories = async (): Promise<Story[]> => {
     // 2. Fetch content for each file
     for (const file of files) {
       if (file.name.endsWith('.md')) {
-        const contentResponse = await fetch(file.download_url);
-        if (contentResponse.ok) {
-          const content = await contentResponse.text();
-          const story = parseMarkdown(content, file.path);
-          if (story) {
-            stories.push(story);
+        try {
+          const contentResponse = await fetch(file.download_url);
+          if (contentResponse.ok) {
+            const content = await contentResponse.text();
+            const story = parseMarkdown(content, file.path);
+            if (story) {
+              stories.push(story);
+            }
+          } else {
+            console.warn(`Failed to fetch story content: ${file.name}`, contentResponse.status);
           }
+        } catch (fileError) {
+          console.warn(`Error fetching story file ${file.name}:`, fileError);
+          // Continue with other files
         }
       }
     }
@@ -543,7 +581,10 @@ const parseMarkdown = (content: string, path: string): Story | null => {
     const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
     const match = content.match(frontmatterRegex);
     
-    if (!match) return null;
+    if (!match) {
+      console.warn(`Invalid markdown format in ${path}: Missing frontmatter`);
+      return null;
+    }
     
     const [, frontmatter, body] = match;
     const metadata: any = {};
@@ -661,16 +702,7 @@ export const saveDraft = async (story: Story): Promise<PublishResult> => {
     );
 
     if (!response.ok) {
-      let errorMessage = 'Failed to save draft to GitHub';
-      try {
-        const error = await response.json();
-        errorMessage = error.message || errorMessage;
-        console.error('GitHub API Error:', error);
-      } catch (parseError) {
-        // Response might be empty or not JSON
-        console.error('GitHub API Error (non-JSON):', response.status, response.statusText);
-        errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
-      }
+      const errorMessage = await handleApiError(response, 'Save draft');
       return {
         success: false,
         error: errorMessage,
