@@ -54,6 +54,11 @@ body {
   pointer-events: none;
 }
 
+/* Hide video thumbnail images in webapp (since we show the actual video) */
+img[data-video-thumbnail="true"] {
+  display: none;
+}
+
 /* Leaflet Popup Custom Styling */
 .leaflet-popup-content-wrapper {
   background: #f9f7f3;

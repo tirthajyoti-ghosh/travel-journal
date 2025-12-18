@@ -82,20 +82,20 @@ export const isGitHubConfigured = async (): Promise<boolean> => {
 
 /**
  * Generate markdown filename from story
- * Format: <epoch-timestamp>.md (e.g. 1732856959000.md)
+ * Format: <epoch-timestamp>.html (e.g. 1732856959000.html)
  * Uses UTC epoch time to be timezone independent
  */
 const generateFilename = (story: Story): string => {
   const timestamp = new Date(story.date).getTime();
-  return `${timestamp}.md`;
+  return `${timestamp}.html`;
 };
 
 
 
 /**
- * Generate markdown content with frontmatter
+ * Generate content with frontmatter
  */
-const generateMarkdown = (story: Story): string => {
+const generateContent = (story: Story): string => {
   const frontmatter = `---
 title: "${story.title}"
 date: "${story.date}"
@@ -110,8 +110,8 @@ ${story.albumShareUrl ? `media:\n  - "${story.albumShareUrl}"` : ''}
 
 `;
 
-  const markdownContent = htmlToMarkdown(story.content);
-  return frontmatter + markdownContent;
+  // Store raw HTML content directly
+  return frontmatter + story.content;
 };
 
 /**
@@ -180,7 +180,7 @@ export const publishStory = async (story: Story): Promise<PublishResult> => {
     
     // Use existing path for updates, generate new for first publish
     const path = isUpdate && story.githubPath ? story.githubPath : `stories/${generateFilename(story)}`;
-    const content = generateMarkdown(story);
+    const content = generateContent(story);
     
     // Base64 encode content
     const encodedContent = btoa(unescape(encodeURIComponent(content)));
@@ -342,8 +342,8 @@ export const archiveStory = async (story: Story): Promise<PublishResult> => {
       archivedAt: new Date().toISOString(),
     };
 
-    // Generate updated markdown with archived frontmatter
-    const content = generateMarkdown(archivedStory);
+    // Generate updated content with archived frontmatter
+    const content = generateContent(archivedStory);
     const encodedContent = btoa(unescape(encodeURIComponent(content)));
 
     // Update file on GitHub
@@ -442,8 +442,8 @@ export const unarchiveStory = async (story: Story): Promise<PublishResult> => {
       archivedAt: undefined,
     };
 
-    // Generate updated markdown (will exclude archived fields)
-    const content = generateMarkdown(unarchivedStory);
+    // Generate updated content (will exclude archived fields)
+    const content = generateContent(unarchivedStory);
     const encodedContent = btoa(unescape(encodeURIComponent(content)));
 
     // Update file on GitHub
@@ -546,12 +546,12 @@ export const fetchAllStories = async (): Promise<Story[]> => {
 
     // 2. Fetch content for each file
     for (const file of files) {
-      if (file.name.endsWith('.md')) {
+      if (file.name.endsWith('.md') || file.name.endsWith('.html')) {
         try {
           const contentResponse = await fetch(file.download_url);
           if (contentResponse.ok) {
             const content = await contentResponse.text();
-            const story = parseMarkdown(content, file.path);
+            const story = parseContent(content, file.path);
             if (story) {
               stories.push(story);
             }
@@ -575,15 +575,15 @@ export const fetchAllStories = async (): Promise<Story[]> => {
 
 
 /**
- * Parse markdown content into Story object
+ * Parse content (markdown or html) into Story object
  */
-const parseMarkdown = (content: string, path: string): Story | null => {
+const parseContent = (content: string, path: string): Story | null => {
   try {
     const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
     const match = content.match(frontmatterRegex);
     
     if (!match) {
-      console.warn(`Invalid markdown format in ${path}: Missing frontmatter`);
+      console.warn(`Invalid format in ${path}: Missing frontmatter`);
       return null;
     }
     
@@ -602,11 +602,16 @@ const parseMarkdown = (content: string, path: string): Story | null => {
       }
     });
 
-    // Convert markdown body back to HTML
-    const htmlContent = markdownToHtml(body);
+    // Handle content based on file type
+    let htmlContent = body;
+    if (path.endsWith('.md')) {
+      // Convert legacy markdown body back to HTML
+      htmlContent = markdownToHtml(body);
+    }
+    // For .html files, body is already HTML
 
     return {
-      id: path.replace('stories/', '').replace('.md', ''),
+      id: path.replace('stories/', '').replace(/\.(md|html)$/, ''),
       title: metadata.title || 'Untitled',
       date: metadata.date || new Date().toISOString(),
       location: metadata.location || '',
@@ -623,7 +628,7 @@ const parseMarkdown = (content: string, path: string): Story | null => {
       archivedAt: metadata.archivedAt,
     };
   } catch (error) {
-    console.error('Error parsing markdown:', error);
+    console.error('Error parsing content:', error);
     return null;
   }
 };
@@ -654,9 +659,9 @@ export const saveDraft = async (story: Story): Promise<PublishResult> => {
     // Use existing path for updates, generate new for first save
     const path = isUpdate && story.githubPath ? story.githubPath : `stories/${generateFilename(story)}`;
     
-    // Ensure story is marked as draft for markdown generation
+    // Ensure story is marked as draft for content generation
     const draftStory = { ...story, isDraft: true };
-    const content = generateMarkdown(draftStory);
+    const content = generateContent(draftStory);
     
     // Base64 encode content
     const encodedContent = btoa(unescape(encodeURIComponent(content)));

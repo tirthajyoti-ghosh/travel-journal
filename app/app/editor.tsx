@@ -93,10 +93,14 @@ export default function EditorScreen() {
     img {
       max-width: 85%;
       height: auto;
-      margin: 1em auto 1.5em auto;
+      margin: 0.5em auto 0.5em auto;
       display: block;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    /* Hide video in editor (mobile) */
+    video {
+      display: none;
     }
     /* When image is in a paragraph, ensure proper spacing */
     p img {
@@ -220,7 +224,20 @@ export default function EditorScreen() {
 
   const handleSave = async () => {
     // Get HTML content from editor first for validation
-    const content = await editor.getHTML();
+    let content = await editor.getHTML();
+    
+    // Process content to ensure video tags are preserved in storage
+    // The editor strips <video> tags, so we use <img> with title="video:URL" in the editor
+    // On save, we transform this back to:
+    // <img ... data-video-thumbnail="true"> <video src="URL" ...>
+    content = content.replace(
+      /<img([^>]+)title="video:([^"]+)"([^>]*)>/g, 
+      (match, p1, url, p2) => {
+        // Reconstruct img with data attribute and append video tag
+        return `<img${p1}title="video:${url}"${p2} data-video-thumbnail="true" />\n<video src="${url}" controls playsinline></video>`;
+      }
+    );
+
     const cleanContent = content.replace(/<[^>]*>/g, '').trim();
     
     // Require either title or body content
@@ -360,7 +377,7 @@ export default function EditorScreen() {
 
   const handleUploadStart = async (placeholderId: string) => {
     // Insert placeholder text immediately
-    const placeholderText = `[Uploading image... 0%]`;
+    const placeholderText = `[Uploading media... 0%]`;
     const currentContent = await editor.getHTML();
     editor.setContent(currentContent + `<p>${placeholderText}</p>`);
     
@@ -382,8 +399,8 @@ export default function EditorScreen() {
         (async () => {
           const content = await editor.getHTML();
           const updatedContent = content.replace(
-            /\[Uploading image\.\.\. \d+%\]/,
-            `[Uploading image... ${percentage}%]`
+            /\[Uploading media\.\.\. \d+%\]/,
+            `[Uploading media... ${percentage}%]`
           );
           if (content !== updatedContent) {
             editor.setContent(updatedContent);
@@ -394,12 +411,30 @@ export default function EditorScreen() {
     });
   };
 
-  const handleUploadComplete = async (placeholderId: string, cdnUrl: string) => {
-    // Replace placeholder with actual image
+  const handleUploadComplete = async (placeholderId: string, cdnUrl: string, thumbnailBase64?: string) => {
+    // Check if it's a video
+    const isVideo = cdnUrl.match(/\.(mp4|mov|webm)$/i);
+
+    // Replace placeholder with actual image or video
     const content = await editor.getHTML();
+    
+    let replacement = '';
+    if (isVideo) {
+      if (thumbnailBase64) {
+        // Insert thumbnail image with video URL in title attribute
+        // This allows us to reconstruct the video tag on save
+        replacement = `<img src="${thumbnailBase64}" title="video:${cdnUrl}" alt="Video Thumbnail" /><br/><br/>`;
+      } else {
+        // Fallback if no thumbnail generated - try to use video tag (might be stripped by editor)
+        replacement = `<video src="${cdnUrl}" controls playsinline></video><br/><br/>`;
+      }
+    } else {
+      replacement = `<img src="${cdnUrl}" /><br/><br/>`;
+    }
+
     const updatedContent = content.replace(
-      /\[Uploading image\.\.\. \d+%\]/,
-      `<img src="${cdnUrl}" />`
+      /\[Uploading media\.\.\. \d+%\]/,
+      replacement
     );
     editor.setContent(updatedContent);
     
@@ -415,7 +450,7 @@ export default function EditorScreen() {
     // Replace placeholder with error message
     const content = await editor.getHTML();
     const updatedContent = content.replace(
-      /\[Uploading image\.\.\. \d+%\]/,
+      /\[Uploading media\.\.\. \d+%\]/,
       `[Upload failed: ${error}]`
     );
     editor.setContent(updatedContent);

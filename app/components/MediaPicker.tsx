@@ -9,7 +9,7 @@ interface MediaPickerProps {
   onMediaUpload: (cdnUrl: string) => void;
   onUploadStart?: (placeholderId: string) => void | Promise<void>;
   onUploadProgress?: (placeholderId: string, percentage: number) => void;
-  onUploadComplete?: (placeholderId: string, cdnUrl: string) => void | Promise<void>;
+  onUploadComplete?: (placeholderId: string, cdnUrl: string, thumbnailBase64?: string) => void | Promise<void>;
   onUploadError?: (placeholderId: string, error: string) => void;
 }
 
@@ -99,7 +99,7 @@ export function MediaPicker({
     });
     
     if (result.success) {
-      onUploadComplete?.(placeholderId, result.cdnUrl);
+      onUploadComplete?.(placeholderId, result.cdnUrl, result.thumbnailBase64);
       onMediaUpload(result.cdnUrl);
     } else {
       onUploadError?.(placeholderId, result.error || 'Upload failed');

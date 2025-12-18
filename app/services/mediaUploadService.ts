@@ -3,6 +3,8 @@ import * as FileSystem from 'expo-file-system';
 import { getInfoAsync, uploadAsync } from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import * as Crypto from 'expo-crypto';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 // FileSystemUploadType enum from expo-file-system legacy types
 enum FileSystemUploadType {
@@ -23,6 +25,7 @@ export interface UploadProgress {
 export interface UploadResult {
   objectKey: string;
   cdnUrl: string;
+  thumbnailBase64?: string;
   success: boolean;
   error?: string;
 }
@@ -199,6 +202,33 @@ export async function uploadMedia(
     const contentType = getContentType(uri);
     const filename = generateUniqueFilename(uri);
 
+    // Generate thumbnail for videos
+    let thumbnailBase64: string | undefined;
+    if (contentType.startsWith('video/') && Platform.OS !== 'web') {
+      try {
+        const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(uri, {
+          quality: 0.3,
+        });
+
+        // Resize and compress thumbnail
+        const manipulatedResult = await ImageManipulator.manipulateAsync(
+          thumbUri,
+          [{ resize: { width: 300 } }],
+          { compress: 0.3, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+
+        if (manipulatedResult.base64) {
+          thumbnailBase64 = `data:image/jpeg;base64,${manipulatedResult.base64}`;
+        }
+
+        // Clean up temp files
+        await FileSystem.deleteAsync(thumbUri, { idempotent: true });
+        await FileSystem.deleteAsync(manipulatedResult.uri, { idempotent: true });
+      } catch (e) {
+        console.warn('Failed to generate thumbnail:', e);
+      }
+    }
+
     // Report initial progress
     if (onProgress) {
       onProgress({ loaded: 0, total: 100, percentage: 0 });
@@ -226,6 +256,7 @@ export async function uploadMedia(
     return {
       objectKey,
       cdnUrl,
+      thumbnailBase64,
       success: true,
     };
   } catch (error) {
