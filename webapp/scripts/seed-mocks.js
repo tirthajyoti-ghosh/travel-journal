@@ -54,51 +54,58 @@ draft: false
 
   // Inject multiple images into the body
   const bodyImages = Array.from({ length: 5 }).map(() => 
-    `![${faker.lorem.words(3)}](https://picsum.photos/seed/${faker.string.uuid()}/800/400)`
+    `https://picsum.photos/seed/${faker.string.uuid()}/800/400`
   );
   
+  // Sample video URL (Big Buck Bunny)
+  const videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+  const videoThumbnail = `https://picsum.photos/seed/${faker.string.uuid()}/800/400`;
+
   const body = `
-# ${title}
+<h1>${title}</h1>
 
-${faker.lorem.paragraphs(2)}
+<p>${faker.lorem.paragraph()}</p>
+<p>${faker.lorem.paragraph()}</p>
 
-${bodyImages[0]}
+<img src="${bodyImages[0]}" alt="${faker.lorem.words(3)}" />
 
-${faker.lorem.paragraphs(2)}
+<p>${faker.lorem.paragraph()}</p>
 
-${bodyImages[1]}
+<img src="${bodyImages[1]}" alt="${faker.lorem.words(3)}" />
 
-## ${faker.lorem.sentence()}
+<h2>${faker.lorem.sentence()}</h2>
 
-${faker.lorem.paragraphs(2)}
+<p>${faker.lorem.paragraph()}</p>
 
-${bodyImages[2]}
+<!-- Video Example -->
+<img src="${videoThumbnail}" title="video:${videoUrl}" data-video-thumbnail="true" />
+<video src="${videoUrl}" controls playsinline></video>
 
-${faker.lorem.paragraphs(1)}
+<p>${faker.lorem.paragraph()}</p>
 
-> ${faker.lorem.sentence()}
+<blockquote>${faker.lorem.sentence()}</blockquote>
 
-${faker.lorem.paragraphs(2)}
+<p>${faker.lorem.paragraph()}</p>
 
-${bodyImages[3]}
+<img src="${bodyImages[3]}" alt="${faker.lorem.words(3)}" />
 
-${faker.lorem.paragraphs(2)}
+<p>${faker.lorem.paragraph()}</p>
 
-### ${faker.lorem.sentence()}
+<h3>${faker.lorem.sentence()}</h3>
 
-${faker.lorem.paragraphs(1)}
+<p>${faker.lorem.paragraph()}</p>
 
-**${faker.lorem.sentence()}**
+<strong>${faker.lorem.sentence()}</strong>
 
-${faker.lorem.paragraphs(2)}
+<p>${faker.lorem.paragraph()}</p>
 
-${bodyImages[4]}
+<img src="${bodyImages[4]}" alt="${faker.lorem.words(3)}" />
 
-${faker.lorem.paragraphs(1)}
+<p>${faker.lorem.paragraph()}</p>
 `;
 
   return {
-    filename: `${slug}.md`,
+    filename: `${slug}.html`,
     content: `${frontmatter}\n${body}`
   };
 };
@@ -107,7 +114,7 @@ ${faker.lorem.paragraphs(1)}
 if (fs.existsSync(STORIES_DIR)) {
     const files = fs.readdirSync(STORIES_DIR);
     for (const file of files) {
-      if (file.endsWith('.md')) {
+      if (file.endsWith('.md') || file.endsWith('.html')) {
         fs.unlinkSync(path.join(STORIES_DIR, file));
       }
     }

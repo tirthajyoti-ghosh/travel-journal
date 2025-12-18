@@ -3,16 +3,18 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import StoryHeader from '@/app/components/StoryHeader';
 import StoryBody from '@/app/components/StoryBody';
 import StoryFooter from '@/app/components/StoryFooter';
 import MediaArtifact from '@/app/components/MediaArtifact';
+import VideoArtifact from '@/app/components/VideoArtifact';
 import MapThumbnailWrapper from '@/app/components/MapThumbnailWrapper';
 
 export async function generateStaticParams() {
   const slugs = getStorySlugs();
   return slugs.map((slug) => ({
-    slug: slug.replace(/\.md$/, ''),
+    slug: slug.replace(/\.(md|html)$/, ''),
   }));
 }
 
@@ -66,6 +68,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
       <StoryBody>
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeRaw]}
           components={{
             h1: ({ children }) => (
               <h2 className="font-[family-name:var(--font-reenie-beanie)] text-4xl font-normal my-6">
@@ -93,14 +96,22 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
                 alt={alt || 'Story image'}
               />
             ),
+            video: ({ src, controls, playsInline, className }) => (
+              <VideoArtifact
+                src={typeof src === 'string' ? src : undefined}
+                controls={controls}
+                playsInline={playsInline}
+                className={className}
+              />
+            ),
             p: ({ children, node }) => {
-              // Check if paragraph only contains an image
-              const hasImage = node?.children?.some(
-                (child: any) => child.tagName === 'img'
+              // Check if paragraph only contains an image or video
+              const hasMedia = node?.children?.some(
+                (child: any) => child.tagName === 'img' || child.tagName === 'video'
               );
               
-              // If paragraph only contains an image, render as div to avoid nesting issues
-              if (hasImage) {
+              // If paragraph only contains media, render as div to avoid nesting issues
+              if (hasMedia) {
                 return <div className="mb-6">{children}</div>;
               }
               

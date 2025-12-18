@@ -17,18 +17,32 @@ export interface Story {
   tags?: string[];
   content: string;
   draft?: boolean;
+  contentType: 'markdown' | 'html';
 }
 
 export function getStorySlugs() {
   if (!fs.existsSync(CONTENT_DIR)) {
     return [];
   }
-  return fs.readdirSync(CONTENT_DIR).filter((file) => file.endsWith('.md'));
+  return fs.readdirSync(CONTENT_DIR).filter((file) => file.endsWith('.md') || file.endsWith('.html'));
 }
 
 export function getStoryBySlug(slug: string): Story {
-  const realSlug = slug.replace(/\.md$/, '');
-  const fullPath = path.join(CONTENT_DIR, `${realSlug}.md`);
+  const realSlug = slug.replace(/\.(md|html)$/, '');
+  
+  // Try to find .html first, then .md
+  let fullPath = path.join(CONTENT_DIR, `${realSlug}.html`);
+  let contentType: 'markdown' | 'html' = 'html';
+  
+  if (!fs.existsSync(fullPath)) {
+    fullPath = path.join(CONTENT_DIR, `${realSlug}.md`);
+    contentType = 'markdown';
+  }
+  
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`Story not found: ${realSlug}`);
+  }
+
   const fileContents = fs.readFileSync(fullPath, 'utf8');
   const { data, content } = matter(fileContents);
 
@@ -43,6 +57,7 @@ export function getStoryBySlug(slug: string): Story {
     tags: data.tags,
     content,
     draft: data.draft,
+    contentType,
   };
 }
 
