@@ -26,7 +26,9 @@ Health check endpoint (no auth required).
 ```json
 {
   "status": "ok",
-  "service": "nomoscribe-media-api"
+  "service": "nomoscribe-media-api",
+  "environment": "development",
+  "prefix": "dev"
 }
 ```
 
@@ -98,13 +100,35 @@ Content-Type: application/json
 Required for deployment:
 
 ```bash
-AWS_ACCESS_KEY=your_access_key_here
-AWS_SECRET_KEY=your_secret_key_here
-AWS_S3_BUCKET=your-s3-bucket-name
-AWS_REGION=your-aws-region
-CLOUDFRONT_DOMAIN=your-cloudfront-domain.cloudfront.net
-APP_SECRET=your_generated_secret_here
+# Environment (optional - infers from VERCEL_ENV or NODE_ENV if not set)
+NOMOSCRIBE_ENVIRONMENT=development  # or 'production'
+
+# AWS Configuration
+NOMOSCRIBE_AWS_ACCESS_KEY=your_access_key_here
+NOMOSCRIBE_AWS_SECRET_KEY=your_secret_key_here
+NOMOSCRIBE_AWS_S3_BUCKET=your-s3-bucket-name
+NOMOSCRIBE_AWS_REGION=your-aws-region
+NOMOSCRIBE_CLOUDFRONT_DOMAIN=your-cloudfront-domain.cloudfront.net
+
+# Authentication
+NOMOSCRIBE_APP_SECRET=your_generated_secret_here
 ```
+
+### Environment Behavior
+
+The API automatically detects the environment and uses different S3 prefixes:
+
+- **Development** (`NOMOSCRIBE_ENVIRONMENT=development` or `NODE_ENV=development`):
+  - Uploads to `dev/` prefix in S3
+  - Example: `s3://bucket/dev/photo_abc123.jpg`
+  - CDN URL: `https://cdn.domain/dev/photo_abc123.jpg`
+
+- **Production** (`NOMOSCRIBE_ENVIRONMENT=production` or `VERCEL_ENV=production`):
+  - Uploads to `prod/` prefix in S3
+  - Example: `s3://bucket/prod/photo_abc123.jpg`
+  - CDN URL: `https://cdn.domain/prod/photo_abc123.jpg`
+
+This mirrors the GitHub branch strategy (dev-playground vs main) and allows easy cleanup of dev files.
 
 ## Local Development
 

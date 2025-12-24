@@ -69,36 +69,51 @@ Android App
 s3://nomoscribe-media-prod/
 ```
 
-### Object structure (flat)
+### Object structure (environment-prefixed)
 
-All media lives in **one flat namespace**.
-
-Examples:
+All media is organized by environment prefix to separate dev and prod files:
 
 ```
-IMG_20250321_181233.jpg
-VID_20250321_181300.mp4
-IMG_20250322_094455.jpg
+s3://nomoscribe-media-prod/
+  ├── dev/
+  │   ├── 2025-12-24_1735123456789_a1b2c3d4.jpg
+  │   └── 2025-12-24_1735123456790_b2c3d4e5.mp4
+  └── prod/
+      ├── 2025-12-24_1735123456791_c3d4e5f6.jpg
+      └── 2025-12-24_1735123456792_d4e5f6g7.mp4
 ```
+
+**Environment Detection:**
+- API automatically detects environment from `NOMOSCRIBE_ENVIRONMENT`, `VERCEL_ENV`, or `NODE_ENV`
+- Development mode: uploads to `dev/` prefix
+- Production mode: uploads to `prod/` prefix
+
+**Benefits:**
+- Easy cleanup of dev files (delete entire `dev/` prefix)
+- S3 lifecycle policies can auto-expire dev files
+- Consistent with GitHub branch strategy (dev-playground vs main)
+- Single bucket and CloudFront distribution
 
 ### Filename rules
 
-* Preserve **original filenames exactly**
-* Images start with `IMG_`
-* Videos start with `VID_`
-* Chronological ordering is implied by filename
+* Format: `YYYY-MM-DD_TIMESTAMP_RANDOMHEX.extension`
+* Example: `2025-12-24_1735123456789_a1b2c3d4.jpg`
+* 8-character random hex suffix ensures uniqueness
+* Chronological ordering by filename
+* Sortable and traceable
 
-#### Collision handling (rare but necessary)
-
-If a filename already exists:
-
+**Full S3 key format:**
 ```
-IMG_20250321_181233.jpg
-IMG_20250321_181233__1.jpg
-IMG_20250321_181233__2.jpg
+{environment}/{date}_{timestamp}_{random}.{extension}
 ```
 
-This is handled automatically by the API.
+Examples:
+```
+dev/2025-12-24_1735123456789_a1b2c3d4.jpg
+prod/2025-12-24_1735123456791_c3d4e5f6.mp4
+```
+
+Collision handling is not needed due to timestamp + random hex combination.
 
 ---
 

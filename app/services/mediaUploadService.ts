@@ -235,6 +235,7 @@ export async function uploadMedia(
     }
 
     // Get presigned URL from API
+    // Note: objectKey includes environment prefix (dev/ or prod/) from API
     const { uploadUrl, objectKey } = await getPresignedUrl(filename, contentType);
 
     // Report progress: got upload URL
@@ -251,6 +252,7 @@ export async function uploadMedia(
     }
 
     // Construct CDN URL
+    // objectKey already includes environment prefix: dev/file.jpg or prod/file.jpg
     const cdnUrl = `https://${CLOUDFRONT_DOMAIN}/${objectKey}`;
 
     return {
