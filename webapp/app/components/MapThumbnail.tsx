@@ -59,7 +59,6 @@ export default function MapThumbnail({ coordinates, zoom = 8 }: MapThumbnailProp
         doubleClickZoom: false,
         boxZoom: false,
         keyboard: false,
-        tap: false,
         touchZoom: false,
       }).setView(center, zoomLevel);
 
