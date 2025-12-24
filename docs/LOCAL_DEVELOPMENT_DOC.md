@@ -25,6 +25,28 @@ We separate the application code from the user content to ensure the "CMS" (GitH
 **Challenge:** Render the UI without needing to fetch from GitHub API constantly or wait for builds.
 **Solution:** Configurable Content Path + Mock Seeding.
 
+### Environment Variables
+
+Create a `.env.local` file in the `/webapp` directory with the following:
+
+```bash
+# Content directory path (relative to webapp directory)
+CONTENT_DIR=../stories
+```
+
+### Stadia Maps Setup (Required for Map Tiles)
+
+Stadia Maps uses domain-based authentication instead of API keys:
+
+1. **Sign up:** Go to [https://stadiamaps.com/](https://stadiamaps.com/) and create a free account (includes 200,000 tile requests/month)
+
+2. **Register your domains** in the Stadia Maps dashboard:
+   - For **local development**: Add `localhost` or `localhost:3000`
+   - For **production**: Add your Vercel domain (e.g., `your-app.vercel.app`)
+   - For **preview deployments**: Add `*.vercel.app` as a wildcard or register specific preview URLs
+
+3. **No code changes needed** - authentication happens automatically based on the domain making the request
+
 ### Mode A: UI & Design (Mock Data) — *Recommended for daily work*
 Use this when refining CSS, animations, typography, or components.
 

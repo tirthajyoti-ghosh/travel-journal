@@ -1,8 +1,11 @@
 import { getAllStories } from '@/lib/api';
 import MapWrapper from './components/MapWrapper';
 
-export default function Home() {
-  const stories = getAllStories();
+export const dynamic = 'force-dynamic'; // Force runtime rendering
+
+export default async function Home() {
+  // Fetch stories at runtime
+  const stories = await getAllStories();
 
   return (
     <main className="h-screen w-screen overflow-hidden">

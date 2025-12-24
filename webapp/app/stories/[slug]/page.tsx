@@ -1,5 +1,4 @@
-import { getStoryBySlug, getStorySlugs } from '@/lib/api';
-import Link from 'next/link';
+import { getStoryBySlug } from '@/lib/api';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -11,12 +10,7 @@ import MediaArtifact from '@/app/components/MediaArtifact';
 import VideoArtifact from '@/app/components/VideoArtifact';
 import MapThumbnailWrapper from '@/app/components/MapThumbnailWrapper';
 
-export async function generateStaticParams() {
-  const slugs = getStorySlugs();
-  return slugs.map((slug) => ({
-    slug: slug.replace(/\.(md|html)$/, ''),
-  }));
-}
+export const dynamic = 'force-dynamic'; // Force runtime rendering
 
 // Calculate reading time (avg 200 words per minute)
 function calculateReadingTime(text: string): number {
@@ -30,7 +24,8 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
   let story;
   
   try {
-    story = getStoryBySlug(slug);
+    // Fetch story at runtime
+    story = await getStoryBySlug(slug);
   } catch (e) {
     notFound();
   }
