@@ -6,7 +6,6 @@ import { useCallback } from 'react';
 import { StoryCard } from '@/components/StoryCard';
 import { EmptyState } from '@/components/EmptyState';
 import { StoryContextMenu } from '@/components/StoryContextMenu';
-import { SyncStatusBar } from '@/components/SyncStatusBar';
 import { Story } from '@/types';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
@@ -21,17 +20,11 @@ export default function HomeScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const { syncing, status, startSync } = useSync();
+  const { startSync } = useSync();
 
-  const loadStories = async (skipSync: boolean = false) => {
-    setLoading(true);
+  const loadStoriesFromLocal = async () => {
     try {
-      // Trigger sync first (if not skipped and not already syncing)
-      if (!skipSync) {
-        await startSync();
-      }
-
-      // After sync, load from local storage (which now has the latest data)
+      // Load from local storage immediately
       const localStories = await storageService.getStories();
       
       // Filter out archived stories
@@ -51,6 +44,32 @@ export default function HomeScreen() {
       
       // Combine: drafts first, then published
       setStories([...sortedDrafts, ...sortedPublished]);
+    } catch (error) {
+      console.error('Failed to load stories:', error);
+    }
+  };
+
+  const loadStories = async (skipSync: boolean = false) => {
+    setLoading(true);
+    try {
+      // Load stories from local storage immediately to show them
+      await loadStoriesFromLocal();
+      
+      // Trigger sync in the background (non-blocking)
+      if (!skipSync) {
+        // Don't await - let it run in background
+        startSync()
+          .then((result) => {
+            // After sync completes, silently reload stories
+            if (result) {
+              loadStoriesFromLocal();
+            }
+          })
+          .catch((error) => {
+            // Silently log sync errors without disrupting UX
+            console.error('[Home] Background sync failed:', error);
+          });
+      }
     } catch (error) {
       console.error('Failed to load stories:', error);
     } finally {
@@ -96,7 +115,8 @@ export default function HomeScreen() {
                 archivedAt: new Date().toISOString(),
               });
 
-              loadStories();
+              // Reload stories from local storage (skip sync since we just updated GitHub)
+              loadStoriesFromLocal();
             } catch (error) {
               Alert.alert('Error', 'Failed to archive story');
             }
@@ -121,7 +141,8 @@ export default function HomeScreen() {
           style: 'destructive',
           onPress: async () => {
             await storageService.deleteStory(story.id);
-            loadStories();
+            // Reload stories from local storage (no sync needed for local delete)
+            loadStoriesFromLocal();
           },
         },
       ]
@@ -150,7 +171,7 @@ export default function HomeScreen() {
   // }
   return (
     <View style={styles.container}>
-      <SyncStatusBar visible={syncing} status={status} />
+      {/* Sync happens silently in background - no UI indicator needed */}
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           <View style={styles.header}>
