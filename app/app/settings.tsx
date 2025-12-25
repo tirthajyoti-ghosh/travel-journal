@@ -23,6 +23,7 @@ export default function SettingsScreen() {
   const [token, setToken] = useState('');
   const [appSecret, setAppSecret] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hasGitHubToken, setHasGitHubToken] = useState(false);
   const [hasAppSecret, setHasAppSecret] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -34,8 +35,9 @@ export default function SettingsScreen() {
 
   const loadConfig = async () => {
     const config = await githubService.loadGitHubConfig();
-    if (config) {
+    if (config && config.token) {
       setToken(config.token);
+      setHasGitHubToken(true);
     }
 
     const secretExists = await mediaUploadService.hasAppSecret();
@@ -58,6 +60,7 @@ export default function SettingsScreen() {
       };
 
       await githubService.saveGitHubConfig(config);
+      setHasGitHubToken(true);
     } catch (error) {
       console.error('Failed to save token:', error);
     }
@@ -187,7 +190,15 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>GitHub Personal Access Token *</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>GitHub Personal Access Token *</Text>
+              {hasGitHubToken && (
+                <View style={styles.configuredBadge}>
+                  <Feather name="check-circle" size={14} color="#4CAF50" />
+                  <Text style={styles.configuredText}>Configured</Text>
+                </View>
+              )}
+            </View>
             <TextInput
               style={styles.input}
               placeholder="github_pat_..."
