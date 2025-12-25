@@ -11,7 +11,6 @@ export interface Story {
   tags?: string[];
   content: string;
   draft?: boolean;
-  contentType: 'markdown' | 'html';
 }
 
 // ============================================================================
@@ -82,9 +81,9 @@ async function fetchStoriesFromGitHub(): Promise<Story[]> {
       return [];
     }
 
-    // Filter for story files only
+    // Filter for HTML story files only
     const storyFiles = files.filter(file => 
-      file.type === 'file' && (file.name.endsWith('.md') || file.name.endsWith('.html'))
+      file.type === 'file' && file.name.endsWith('.html')
     );
 
     console.log(`📚 Found ${storyFiles.length} story files`);
@@ -102,15 +101,14 @@ async function fetchStoriesFromGitHub(): Promise<Story[]> {
         }
 
         const content = await contentResponse.text();
-        const { data, content: body } = matter(content);
+        const { data, content: htmlBody } = matter(content);
 
         // Skip drafts and archived stories
         if (data.draft || data.archived) {
           return null;
         }
 
-        const slug = file.name.replace(/\.(md|html)$/, '');
-        const contentType: 'markdown' | 'html' = file.name.endsWith('.html') ? 'html' : 'markdown';
+        const slug = file.name.replace('.html', '');
 
         const story: Story = {
           slug,
@@ -121,9 +119,8 @@ async function fetchStoriesFromGitHub(): Promise<Story[]> {
           album_share_url: data.media?.[0],
           media_item_ids: data.media,
           tags: data.tags,
-          content: body,
+          content: htmlBody,
           draft: data.draft,
-          contentType,
         };
 
         return story;
@@ -172,16 +169,15 @@ async function fetchStoriesFromFilesystem(): Promise<Story[]> {
   }
 
   const files = fs.readdirSync(CONTENT_DIR)
-    .filter((file) => file.endsWith('.md') || file.endsWith('.html'));
+    .filter((file) => file.endsWith('.html'));
 
   console.log(`📚 Found ${files.length} story files`);
 
   const stories: Story[] = files.map((filename) => {
-    const slug = filename.replace(/\.(md|html)$/, '');
+    const slug = filename.replace('.html', '');
     const fullPath = path.join(CONTENT_DIR, filename);
     const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data, content } = matter(fileContents);
-    const contentType: 'markdown' | 'html' = filename.endsWith('.html') ? 'html' : 'markdown';
+    const { data, content: htmlBody } = matter(fileContents);
 
     return {
       slug,
@@ -192,9 +188,8 @@ async function fetchStoriesFromFilesystem(): Promise<Story[]> {
       album_share_url: data.album_share_url,
       media_item_ids: data.media_item_ids,
       tags: data.tags,
-      content,
+      content: htmlBody,
       draft: data.draft,
-      contentType,
     };
   });
 

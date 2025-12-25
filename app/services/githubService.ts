@@ -1,6 +1,5 @@
 import * as storageService from './storageService';
 import { GitHubConfig, Story } from '@/types';
-import { htmlToMarkdown, markdownToHtml } from './markdownConverter';
 
 const GITHUB_CONFIG_KEY = '@travel_journal:github_config';
 
@@ -81,11 +80,11 @@ export const isGitHubConfigured = async (): Promise<boolean> => {
 };
 
 /**
- * Generate markdown filename from story
+ * Generate HTML filename from story
  * Format: <epoch-timestamp>.html (e.g. 1732856959000.html)
  * Uses UTC epoch time to be timezone independent
  */
-const generateFilename = (story: Story): string => {
+const generateHtmlFilename = (story: Story): string => {
   const timestamp = new Date(story.date).getTime();
   return `${timestamp}.html`;
 };
@@ -179,7 +178,7 @@ export const publishStory = async (story: Story): Promise<PublishResult> => {
     const isUpdate = !!(story.githubPath && story.isPublished);
     
     // Use existing path for updates, generate new for first publish
-    const path = isUpdate && story.githubPath ? story.githubPath : `stories/${generateFilename(story)}`;
+    const path = isUpdate && story.githubPath ? story.githubPath : `stories/${generateHtmlFilename(story)}`;
     const content = generateContent(story);
     
     // Base64 encode content
@@ -544,14 +543,14 @@ export const fetchAllStories = async (): Promise<Story[]> => {
 
     const stories: Story[] = [];
 
-    // 2. Fetch content for each file
+    // 2. Fetch content for each file (HTML only)
     for (const file of files) {
-      if (file.name.endsWith('.md') || file.name.endsWith('.html')) {
+      if (file.name.endsWith('.html')) {
         try {
           const contentResponse = await fetch(file.download_url);
           if (contentResponse.ok) {
             const content = await contentResponse.text();
-            const story = parseContent(content, file.path);
+            const story = parseHtmlContent(content, file.path);
             if (story) {
               stories.push(story);
             }
@@ -575,9 +574,9 @@ export const fetchAllStories = async (): Promise<Story[]> => {
 
 
 /**
- * Parse content (markdown or html) into Story object
+ * Parse HTML content with frontmatter into Story object
  */
-const parseContent = (content: string, path: string): Story | null => {
+const parseHtmlContent = (content: string, path: string): Story | null => {
   try {
     const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
     const match = content.match(frontmatterRegex);
@@ -587,7 +586,7 @@ const parseContent = (content: string, path: string): Story | null => {
       return null;
     }
     
-    const [, frontmatter, body] = match;
+    const [, frontmatter, htmlBody] = match;
     const metadata: any = {};
     
     frontmatter.split('\n').forEach(line => {
@@ -602,20 +601,13 @@ const parseContent = (content: string, path: string): Story | null => {
       }
     });
 
-    // Handle content based on file type
-    let htmlContent = body;
-    if (path.endsWith('.md')) {
-      // Convert legacy markdown body back to HTML
-      htmlContent = markdownToHtml(body);
-    }
-    // For .html files, body is already HTML
-
+    // Body is already HTML - use directly
     return {
-      id: path.replace('stories/', '').replace(/\.(md|html)$/, ''),
+      id: path.replace('stories/', '').replace('.html', ''),
       title: metadata.title || 'Untitled',
       date: metadata.date || new Date().toISOString(),
       location: metadata.location || '',
-      content: htmlContent,
+      content: htmlBody,
       images: [], 
       albumShareUrl: metadata.media ? metadata.media.replace('- ', '').trim() : undefined,
       isDraft: metadata.draft === 'true',
@@ -628,7 +620,7 @@ const parseContent = (content: string, path: string): Story | null => {
       archivedAt: metadata.archivedAt,
     };
   } catch (error) {
-    console.error('Error parsing content:', error);
+    console.error('Error parsing HTML content:', error);
     return null;
   }
 };
@@ -657,7 +649,7 @@ export const saveDraft = async (story: Story): Promise<PublishResult> => {
     const isUpdate = !!(story.githubPath);
     
     // Use existing path for updates, generate new for first save
-    const path = isUpdate && story.githubPath ? story.githubPath : `stories/${generateFilename(story)}`;
+    const path = isUpdate && story.githubPath ? story.githubPath : `stories/${generateHtmlFilename(story)}`;
     
     // Ensure story is marked as draft for content generation
     const draftStory = { ...story, isDraft: true };

@@ -108,8 +108,7 @@ app/
 │   ├── githubService.ts    # GitHub API integration
 │   ├── mediaUploadService.ts # S3 upload handling
 │   ├── syncService.ts      # Sync orchestration
-│   ├── citySearchService.ts # City search
-│   └── markdownConverter.ts # HTML/Markdown conversion
+│   └── citySearchService.ts # City search
 ├── hooks/                   # Custom React hooks
 │   ├── use-sync.ts         # Sync state management
 │   ├── use-media-upload.ts # Upload state

@@ -1,13 +1,8 @@
 import { getStoryBySlug } from '@/lib/api';
 import { notFound } from 'next/navigation';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
 import StoryHeader from '@/app/components/StoryHeader';
 import StoryBody from '@/app/components/StoryBody';
 import StoryFooter from '@/app/components/StoryFooter';
-import MediaArtifact from '@/app/components/MediaArtifact';
-import VideoArtifact from '@/app/components/VideoArtifact';
 import MapThumbnailWrapper from '@/app/components/MapThumbnailWrapper';
 
 export const dynamic = 'force-dynamic'; // Force runtime rendering
@@ -61,67 +56,10 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
       )} */}
 
       <StoryBody>
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw]}
-          components={{
-            h1: ({ children }) => (
-              <h2 className="font-[family-name:var(--font-reenie-beanie)] text-4xl font-normal my-6">
-                {children}
-              </h2>
-            ),
-            h2: ({ children }) => (
-              <h2 className="font-[family-name:var(--font-reenie-beanie)] text-3xl font-normal my-5">
-                {children}
-              </h2>
-            ),
-            h3: ({ children }) => (
-              <h3 className="font-[family-name:var(--font-patrick-hand)] text-2xl my-4">
-                {children}
-              </h3>
-            ),
-            blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-[var(--soft-highlight)] pl-6 my-8 italic font-[family-name:var(--font-reenie-beanie)] text-2xl text-[var(--sepia-accent)]">
-                {children}
-              </blockquote>
-            ),
-            img: ({ src, alt }) => (
-              <MediaArtifact
-                src={typeof src === 'string' ? src : ''}
-                alt={alt || 'Story image'}
-              />
-            ),
-            video: ({ src, controls, playsInline, className }) => (
-              <VideoArtifact
-                src={typeof src === 'string' ? src : undefined}
-                controls={controls}
-                playsInline={playsInline}
-                className={className}
-              />
-            ),
-            p: ({ children, node }) => {
-              // Check if paragraph only contains an image or video
-              const hasMedia = node?.children?.some(
-                (child: any) => child.tagName === 'img' || child.tagName === 'video'
-              );
-              
-              // If paragraph only contains media, render as div to avoid nesting issues
-              if (hasMedia) {
-                return <div className="mb-6">{children}</div>;
-              }
-              
-              return <p className="mb-6 leading-relaxed">{children}</p>;
-            },
-            ul: ({ children }) => (
-              <ul className="list-disc list-inside mb-6 space-y-2">{children}</ul>
-            ),
-            ol: ({ children }) => (
-              <ol className="list-decimal list-inside mb-6 space-y-2">{children}</ol>
-            ),
-          }}
-        >
-          {story.content}
-        </ReactMarkdown>
+        <div 
+          className="story-html-content"
+          dangerouslySetInnerHTML={{ __html: story.content }}
+        />
       </StoryBody>
 
       <StoryFooter 
