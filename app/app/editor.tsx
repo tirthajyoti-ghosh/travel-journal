@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
-import Feather from '@expo/vector-icons/Feather';
+import { ArrowLeftIcon, CloudArrowUpIcon, ImageIcon, XIcon } from 'phosphor-react-native';
 import * as storageService from '@/services/storageService';
 import * as githubService from '@/services/githubService';
 import { Story } from '@/types';
@@ -186,7 +186,7 @@ export default function EditorScreen() {
 
   // Update location field when detection completes
   useEffect(() => {
-    if (detectedLocation && !location) {
+    if (detectedLocation) {
       setLocation(detectedLocation);
       if (detectedCoordinates) {
         setCoordinates(detectedCoordinates);
@@ -485,7 +485,7 @@ export default function EditorScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Feather name="arrow-left" size={24} color={colors.text} />
+            <ArrowLeftIcon size={24} color={colors.text} />
           </TouchableOpacity>
           
           <View style={styles.headerActions}>
@@ -514,8 +514,7 @@ export default function EditorScreen() {
                   onPress={handlePublish}
                   disabled={loading || publishing}
                 >
-                  <Feather 
-                    name="upload-cloud" 
+                  <CloudArrowUpIcon 
                     size={16} 
                     color={colors.white} 
                   />
@@ -544,7 +543,7 @@ export default function EditorScreen() {
                 setLocation(selectedLocation);
                 setCoordinates(selectedCoordinates);
               }}
-              // onGPSPress={detectLocation}
+              onGPSPress={detectLocation}
               placeholder="Search city..."
               gpsDetecting={detectingLocation}
               style={styles.locationInputContainer}
@@ -574,7 +573,7 @@ export default function EditorScreen() {
               style={styles.imageButton}
               onPress={() => setShowMediaPicker(true)}
             >
-              <Feather name="image" size={24} color={colors.accent} />
+              <ImageIcon size={24} color={colors.accent} />
             </TouchableOpacity>
           </View>
         </View>
@@ -601,7 +600,7 @@ export default function EditorScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Upload Media</Text>
                 <TouchableOpacity onPress={() => setShowMediaPicker(false)}>
-                  <Feather name="x" size={24} color={colors.text} />
+                  <XIcon size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
               <View style={styles.modalContent}>

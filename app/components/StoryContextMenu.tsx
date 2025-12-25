@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, Animated } from 'react-native';
 import { useEffect, useRef } from 'react';
-import Feather from '@expo/vector-icons/Feather';
+import { PencilSimpleIcon, ArchiveIcon, ArrowCounterClockwiseIcon, TrashIcon } from 'phosphor-react-native';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
 
@@ -90,7 +90,7 @@ export function StoryContextMenu({
                   onClose();
                 }}
               >
-                <Feather name="edit-2" size={20} color={colors.text} />
+                <PencilSimpleIcon size={20} color={colors.text} />
                 <Text style={styles.menuItemText}>Edit</Text>
               </TouchableOpacity>
 
@@ -105,7 +105,7 @@ export function StoryContextMenu({
                       onClose();
                     }}
                   >
-                    <Feather name="archive" size={20} color={colors.text} />
+                    <ArchiveIcon size={20} color={colors.text} />
                     <Text style={styles.menuItemText}>Archive</Text>
                   </TouchableOpacity>
                   <View style={styles.separator} />
@@ -121,7 +121,7 @@ export function StoryContextMenu({
                       onClose();
                     }}
                   >
-                    <Feather name="refresh-ccw" size={20} color={colors.text} />
+                    <ArrowCounterClockwiseIcon size={20} color={colors.text} />
                     <Text style={styles.menuItemText}>Unarchive</Text>
                   </TouchableOpacity>
                   <View style={styles.separator} />
@@ -135,7 +135,7 @@ export function StoryContextMenu({
                   onClose();
                 }}
               >
-                <Feather name="trash-2" size={20} color={colors.error} />
+                <TrashIcon size={20} color={colors.error} />
                 <Text style={[styles.menuItemText, { color: colors.error }]}>
                   {isPublished ? 'Delete Local' : 'Delete'}
                 </Text>

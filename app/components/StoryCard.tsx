@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+import { PencilLine, CheckCircle } from 'phosphor-react-native';
 import { Story } from '@/types';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
@@ -59,12 +59,12 @@ export function StoryCard({ story, onPress, onLongPress }: StoryCardProps) {
       <View style={styles.statusRow}>
         {isDraft ? (
           <View style={styles.draftBadge}>
-            <Feather name="edit-3" size={12} color={colors.accent} />
+            <PencilLine size={12} color={colors.accent} />
             <Text style={styles.draftText}>DRAFT</Text>
           </View>
         ) : (
           <View style={styles.publishedBadge}>
-            <Feather name="check-circle" size={12} color="#10B981" />
+            <CheckCircle size={12} color="#10B981" weight="fill" />
             <Text style={styles.publishedText}>Published</Text>
           </View>
         )}

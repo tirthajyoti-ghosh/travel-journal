@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
-import Feather from '@expo/vector-icons/Feather';
+import { ArrowLeftIcon, ArchiveIcon, CaretRightIcon, CheckCircleIcon, InfoIcon, WarningIcon } from 'phosphor-react-native';
 import * as githubService from '@/services/githubService';
 import * as storageService from '@/services/storageService';
 import * as mediaUploadService from '@/services/mediaUploadService';
@@ -149,7 +149,7 @@ export default function SettingsScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Feather name="arrow-left" size={24} color={colors.text} />
+            <ArrowLeftIcon size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Settings</Text>
           <View style={{ width: 24 }} />
@@ -175,10 +175,10 @@ export default function SettingsScreen() {
               onPress={() => router.push('/archived')}
             >
               <View style={styles.menuItemLeft}>
-                <Feather name="archive" size={20} color={colors.text} />
+                <ArchiveIcon size={20} color={colors.text} />
                 <Text style={styles.menuItemText}>Archived Stories</Text>
               </View>
-              <Feather name="chevron-right" size={20} color={colors.gray} />
+              <CaretRightIcon size={20} color={colors.gray} />
             </TouchableOpacity>
           </View>
 
@@ -194,7 +194,7 @@ export default function SettingsScreen() {
               <Text style={styles.label}>GitHub Personal Access Token *</Text>
               {hasGitHubToken && (
                 <View style={styles.configuredBadge}>
-                  <Feather name="check-circle" size={14} color="#4CAF50" />
+                  <CheckCircleIcon size={14} color="#4CAF50" weight="fill" />
                   <Text style={styles.configuredText}>Configured</Text>
                 </View>
               )}
@@ -226,7 +226,7 @@ export default function SettingsScreen() {
               <Text style={styles.label}>App Secret *</Text>
               {hasAppSecret && (
                 <View style={styles.configuredBadge}>
-                  <Feather name="check-circle" size={14} color="#4CAF50" />
+                  <CheckCircleIcon size={14} color="#4CAF50" weight="fill" />
                   <Text style={styles.configuredText}>Configured</Text>
                 </View>
               )}
@@ -247,7 +247,7 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.infoBox}>
-            <Feather name="info" size={16} color={colors.accent} />
+            <InfoIcon size={16} color={colors.accent} />
             <Text style={styles.infoText}>
               Your credentials are saved automatically and stored securely on your device.
             </Text>
@@ -256,7 +256,7 @@ export default function SettingsScreen() {
           {/* Option 8: #EF6351 - Bittersweet */}
           <View style={[styles.dangerZone, { backgroundColor: '#FFF5F3', borderColor: '#F8C7BE' }]}>
             <View style={styles.dangerHeader}>
-              <Feather name="alert-triangle" size={20} color="#EF6351" />
+              <WarningIcon size={20} color="#EF6351" />
               <Text style={[styles.dangerTitle, { color: '#EF6351' }]}>Danger Zone</Text>
             </View>
             <Text style={styles.dangerDescription}>

@@ -8,7 +8,7 @@ import { StoryContextMenu } from '@/components/StoryContextMenu';
 import { Story } from '@/types';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
-import Feather from '@expo/vector-icons/Feather';
+import { ArrowLeftIcon } from 'phosphor-react-native';
 import * as storageService from '@/services/storageService';
 import * as githubService from '@/services/githubService';
 
@@ -119,7 +119,7 @@ export default function ArchivedScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Feather name="arrow-left" size={24} color={colors.text} />
+            <ArrowLeftIcon size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Archived Stories</Text>
           <View style={{ width: 24 }} />

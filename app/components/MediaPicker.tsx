@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+import { Camera, Image as ImageIcon } from 'phosphor-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
@@ -123,7 +123,7 @@ export function MediaPicker({
               style={[styles.button, styles.primaryButton]} 
               onPress={handleTakePhoto}
             >
-              <Feather name="camera" size={16} color={colors.white} />
+              <Camera size={16} color={colors.white} />
               <Text style={styles.buttonText}>Take Photo</Text>
             </TouchableOpacity>
           )} */}
@@ -131,7 +131,7 @@ export function MediaPicker({
             style={[styles.button, styles.primaryButton]} 
             onPress={handlePickImage}
           >
-            <Feather name="image" size={16} color={colors.white} />
+            <ImageIcon size={16} color={colors.white} />
             <Text style={styles.buttonText}>Pick Photo</Text>
           </TouchableOpacity>
         </View>

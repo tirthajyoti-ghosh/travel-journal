@@ -11,7 +11,8 @@ import {
   Pressable,
 } from 'react-native';
 import { FlatList } from 'react-native-gesture-handler';
-import { Ionicons } from '@expo/vector-icons';
+import { MagnifyingGlassIcon, MapPinIcon } from 'phosphor-react-native';
+import { colors } from '@/theme/colors';
 import { searchCities, SearchResult, isSearchServiceReady, initializeSearchService } from '@/services/citySearchService';
 import { isCityDataAvailable, initializeCityData, InitProgress } from '@/services/cityDataDownloader';
 
@@ -41,6 +42,11 @@ export function CityAutocomplete({
   const [downloadProgress, setDownloadProgress] = useState<InitProgress | null>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
+
+  // Sync internal query state when value prop changes (e.g., from GPS detection)
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
 
   // Check if city data needs to be downloaded
   useEffect(() => {
@@ -175,7 +181,7 @@ export function CityAutocomplete({
             </>
           ) : (
             <>
-              <ActivityIndicator size="large" color="#007AFF" style={styles.modalLoader} />
+              <ActivityIndicator size="large" color={colors.accent} style={styles.modalLoader} />
               <Text style={styles.modalProgressText}>{downloadProgress.message}</Text>
             </>
           )}
@@ -190,7 +196,7 @@ export function CityAutocomplete({
       onPress={() => handleSelectCity(item)}
     >
       <View style={styles.resultIconContainer}>
-        <Ionicons name="location-outline" size={20} color="#666" />
+        <MapPinIcon size={18} color={colors.gray} />
       </View>
       <View style={styles.resultTextContainer}>
         <Text style={styles.resultCity}>{item.city}</Text>
@@ -208,7 +214,7 @@ export function CityAutocomplete({
     return (
       <View style={[styles.container, style]}>
         <View style={styles.initializingContainer}>
-          <ActivityIndicator size="small" color="#007AFF" />
+          <ActivityIndicator size="small" color={colors.accent} />
           <Text style={styles.initializingText}>Loading city database...</Text>
         </View>
       </View>
@@ -218,14 +224,14 @@ export function CityAutocomplete({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.inputContainer}>
-        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+        <MagnifyingGlassIcon size={18} color={colors.gray} style={styles.searchIcon} />
         <TextInput
           ref={inputRef}
           style={styles.input}
           value={query}
           onChangeText={handleTextChange}
           placeholder={placeholder}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.gray}
           autoCapitalize="words"
           autoCorrect={false}
           onFocus={() => {
@@ -234,7 +240,7 @@ export function CityAutocomplete({
             }
           }}
         />
-        {isSearching && <ActivityIndicator size="small" color="#007AFF" style={styles.loader} />}
+        {isSearching && <ActivityIndicator size="small" color={colors.accent} style={styles.loader} />}
         {onGPSPress && (
           <TouchableOpacity
             style={styles.gpsButton}
@@ -242,9 +248,9 @@ export function CityAutocomplete({
             disabled={gpsDetecting}
           >
             {gpsDetecting ? (
-              <ActivityIndicator size="small" color="#007AFF" />
+              <ActivityIndicator size="small" color={colors.accent} />
             ) : (
-              <Ionicons name="navigate" size={22} color="#007AFF" />
+              <MapPinIcon size={22} color={colors.accent} />
             )}
           </TouchableOpacity>
         )}
@@ -286,18 +292,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.paper,
     borderRadius: 8,
     gap: 8,
   },
   initializingText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.gray,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.paper,
     borderRadius: 8,
     paddingHorizontal: 12,
     height: 44,
@@ -309,7 +315,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#000',
+    color: colors.text,
     paddingVertical: 0,
   },
   loader: {
@@ -324,9 +330,9 @@ const styles = StyleSheet.create({
     top: 48,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -343,7 +349,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.lines,
   },
   resultIconContainer: {
     marginRight: 12,
@@ -354,12 +360,12 @@ const styles = StyleSheet.create({
   resultCity: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#000',
+    color: colors.text,
     marginBottom: 2,
   },
   resultDetails: {
     fontSize: 13,
-    color: '#666',
+    color: colors.gray,
   },
   resultFlag: {
     marginLeft: 8,
@@ -375,26 +381,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 24,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   modalText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
     lineHeight: 22,
   },
   modalSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: colors.gray,
     marginBottom: 4,
   },
   modalButtons: {
@@ -409,39 +415,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalButtonPrimary: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.accent,
   },
   modalButtonSecondary: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.lines,
   },
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.white,
   },
   modalButtonTextSecondary: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   modalLoader: {
     marginVertical: 20,
   },
   modalProgressText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.text,
     textAlign: 'center',
     marginTop: 12,
   },
   progressBarContainer: {
     height: 4,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.lines,
     borderRadius: 2,
     marginTop: 12,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.accent,
   },
 });

@@ -9,7 +9,7 @@ import { typography } from '@/theme/typography';
 import { getViewerHTML } from '@/theme/editorStyles';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { EmptyState } from '@/components/EmptyState';
-import Feather from '@expo/vector-icons/Feather';
+import { ArrowLeftIcon, ArchiveIcon, ImageIcon, PencilSimpleIcon } from 'phosphor-react-native';
 import * as storageService from '@/services/storageService';
 import * as githubService from '@/services/githubService';
 import { Story } from '@/types';
@@ -130,7 +130,7 @@ export default function ViewerScreen() {
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()}>
-              <Feather name="arrow-left" size={24} color={colors.text} />
+              <ArrowLeftIcon size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
           <View style={styles.errorContainer}>
@@ -153,10 +153,10 @@ export default function ViewerScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Feather name="arrow-left" size={24} color={colors.text} />
+            <ArrowLeftIcon size={24} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDeleteStory}>
-            <Feather name="archive" size={24} color={colors.text} />
+            <ArchiveIcon size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -171,7 +171,7 @@ export default function ViewerScreen() {
               style={styles.photoButton}
               onPress={() => Linking.openURL(story.albumShareUrl!)}
             >
-              <Feather name="image" size={20} color={colors.white} />
+              <ImageIcon size={20} color={colors.white} />
               <Text style={styles.photoButtonText}>View Album Photos</Text>
             </TouchableOpacity>
           )}
@@ -203,7 +203,7 @@ export default function ViewerScreen() {
           style={styles.fab}
           onPress={() => router.push({ pathname: '/editor', params: { storyId: id } })}
         >
-          <Feather name="edit-2" size={24} color={colors.white} />
+          <PencilSimpleIcon size={24} color={colors.white} />
         </TouchableOpacity>
       </SafeAreaView>
     </View>

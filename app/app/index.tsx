@@ -10,7 +10,7 @@ import { SyncStatusBar } from '@/components/SyncStatusBar';
 import { Story } from '@/types';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
-import Feather from '@expo/vector-icons/Feather';
+import { GearIcon, PlusIcon } from 'phosphor-react-native';
 import * as storageService from '@/services/storageService';
 import * as githubService from '@/services/githubService';
 import { useSync } from '@/hooks/use-sync';
@@ -159,7 +159,7 @@ export default function HomeScreen() {
               style={styles.settingsButton}
               onPress={() => router.push('/settings')}
             >
-              <Feather name="settings" size={24} color={colors.text} />
+              <GearIcon size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
           
@@ -206,7 +206,7 @@ export default function HomeScreen() {
             style={styles.fab} 
             onPress={() => router.push('/editor')}
           >
-            <Feather name="plus" size={32} color={colors.white} />
+            <PlusIcon size={32} color={colors.white} weight="bold" />
           </TouchableOpacity>
 
           <StoryContextMenu
