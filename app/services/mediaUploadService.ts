@@ -80,6 +80,13 @@ async function getPresignedUrl(
   const timestamp = Math.floor(Date.now() / 1000);
   const signature = await generateSignature(timestamp);
 
+  console.log('Requesting presigned URL:', {
+    url: `${API_BASE_URL}/media/upload-url`,
+    timestamp,
+    filename,
+    contentType,
+  });
+
   const response = await fetch(`${API_BASE_URL}/media/upload-url`, {
     method: 'POST',
     headers: {
@@ -93,12 +100,33 @@ async function getPresignedUrl(
     }),
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to get upload URL');
+  console.log('API response:', {
+    status: response.status,
+    statusText: response.statusText,
+    contentType: response.headers.get('content-type'),
+  });
+
+  // Get response text first (can only read body once)
+  const responseText = await response.text();
+  console.log('Response text (first 500 chars):', responseText.substring(0, 500));
+
+  // Parse the response based on content type
+  let data;
+  try {
+    data = JSON.parse(responseText);
+    console.log('Parsed response:', data);
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError);
+    throw new Error(`Invalid JSON response from server: ${responseText.substring(0, 200)}`);
   }
 
-  return await response.json();
+  // Check for error response
+  if (!response.ok) {
+    const errorMessage = data.message || data.error || `Failed to get upload URL (${response.status})`;
+    throw new Error(errorMessage);
+  }
+
+  return data;
 }
 
 /**

@@ -7,7 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://travel-journal-lyart-kappa.vercel.app",
+        "EXPO_PUBLIC_API_BASE_URL": "https://nomoscribe-api-dev.vercel.app/",
         "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net",
         "EXPO_PUBLIC_APP_SECRET_KEY": "@nomoscribe:app_secret"
       },
@@ -18,8 +18,9 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://travel-journal-lyart-kappa.vercel.app",
-        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net"
+        "EXPO_PUBLIC_API_BASE_URL": "https://nomoscribe-api-dev.vercel.app/",
+        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net",
+        "EXPO_PUBLIC_APP_SECRET_KEY": "@nomoscribe:app_secret"
       },
       "android": {
         "buildType": "apk"
@@ -28,8 +29,9 @@
     "production": {
       "env": {
         "NODE_ENV": "production",
-        "EXPO_PUBLIC_API_BASE_URL": "https://travel-journal-lyart-kappa.vercel.app",
-        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net"
+        "EXPO_PUBLIC_API_BASE_URL": "https://nomoscribe-api.vercel.app/",
+        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net",
+        "EXPO_PUBLIC_APP_SECRET_KEY": "@nomoscribe:app_secret"
       },
       "android": {
         "buildType": "apk"
@@ -45,8 +47,9 @@
       "extends": "production",
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://travel-journal-lyart-kappa.vercel.app",
-        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net"
+        "EXPO_PUBLIC_API_BASE_URL": "https://nomoscribe-api.vercel.app/",
+        "EXPO_PUBLIC_CLOUDFRONT_DOMAIN": "dkt41sp0pphbb.cloudfront.net",
+        "EXPO_PUBLIC_APP_SECRET_KEY": "@nomoscribe:app_secret"
       },
       "android": {
         "buildType": "apk",
