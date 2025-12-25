@@ -13,6 +13,7 @@ import { DottedBackground } from '@/components/DottedBackground';
 import { CityAutocomplete } from '@/components/CityAutocomplete';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { useLocation } from '@/hooks/use-location';
+import * as ImagePicker from 'expo-image-picker';
 import { 
   RichText, 
   Toolbar, 
@@ -468,6 +469,57 @@ export default function EditorScreen() {
     editor.focus();
   };
 
+  const handlePickImageDirectly = async () => {
+    // Request permissions first
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant media library access to upload photos.');
+        return;
+      }
+    }
+
+    try {
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        allowsEditing: false,
+        quality: 0.9,
+        allowsMultipleSelection: false,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const uri = asset.uri;
+
+        // Generate unique placeholder ID
+        const placeholderId = `upload_${Date.now()}`;
+        
+        // Notify upload start (await in case it's async)
+        await handleUploadStart(placeholderId);
+        
+        // Import the upload service directly to get progress callbacks
+        const { uploadMedia: directUpload } = await import('@/services/mediaUploadService');
+        
+        // Perform upload with progress tracking
+        const uploadResult = await directUpload(uri, (prog) => {
+          handleUploadProgress(placeholderId, prog.percentage);
+        });
+        
+        if (uploadResult.success) {
+          await handleUploadComplete(placeholderId, uploadResult.cdnUrl, uploadResult.thumbnailBase64);
+          handlePhotoInsert(uploadResult.cdnUrl);
+        } else {
+          await handleUploadError(placeholderId, uploadResult.error || 'Upload failed');
+          Alert.alert('Upload Failed', uploadResult.error || 'Failed to upload media. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
   // Custom toolbar items with image picker button
   const customToolbarItems: ToolbarItem[] = [
     ...DEFAULT_TOOLBAR_ITEMS,
@@ -571,7 +623,7 @@ export default function EditorScreen() {
             </View>
             <TouchableOpacity 
               style={styles.imageButton}
-              onPress={() => setShowMediaPicker(true)}
+              onPress={handlePickImageDirectly}
             >
               <ImageIcon size={24} color={colors.accent} />
             </TouchableOpacity>

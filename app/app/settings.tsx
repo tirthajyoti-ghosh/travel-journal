@@ -25,7 +25,7 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(false);
   const [hasGitHubToken, setHasGitHubToken] = useState(false);
   const [hasAppSecret, setHasAppSecret] = useState(false);
-  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const targetBranch = githubService.getTargetBranch();
 
