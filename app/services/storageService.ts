@@ -32,6 +32,11 @@ export async function getStory(id: string): Promise<Story | null> {
 
 /**
  * Save a story (create or update)
+ * 
+ * IMPORTANT: If the story already has an `updatedAt` timestamp (e.g., when
+ * syncing from GitHub), it will be preserved. Otherwise, a new timestamp
+ * is generated. This prevents sync loops where pulled stories immediately
+ * appear "newer" than their GitHub version.
  */
 export async function saveStory(story: Partial<Story>): Promise<Story> {
   try {
@@ -43,10 +48,12 @@ export async function saveStory(story: Partial<Story>): Promise<Story> {
     
     if (existingIndex >= 0) {
       // Update existing
+      // Preserve updatedAt if explicitly provided (e.g., from GitHub sync)
+      // Otherwise, use current timestamp
       const updatedStory: Story = {
         ...stories[existingIndex],
         ...story,
-        updatedAt: now,
+        updatedAt: story.updatedAt || now,
       };
       stories[existingIndex] = updatedStory;
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(stories));
@@ -63,9 +70,16 @@ export async function saveStory(story: Partial<Story>): Promise<Story> {
         images: story.images || [],
         albumShareUrl: story.albumShareUrl,
         isDraft: story.isDraft !== undefined ? story.isDraft : true,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: story.createdAt || now,
+        updatedAt: story.updatedAt || now,
         coverImage: story.coverImage,
+        // Preserve all other properties from the input story
+        isPublished: story.isPublished,
+        publishedAt: story.publishedAt,
+        githubPath: story.githubPath,
+        archived: story.archived,
+        archivedAt: story.archivedAt,
+        coordinates: story.coordinates,
       };
       stories.push(newStory);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(stories));

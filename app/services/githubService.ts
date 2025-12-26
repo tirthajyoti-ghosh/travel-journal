@@ -81,21 +81,31 @@ export const isGitHubConfigured = async (): Promise<boolean> => {
 
 /**
  * Generate HTML filename from story
- * Format: <epoch-timestamp>.html (e.g. 1732856959000.html)
- * Uses UTC epoch time to be timezone independent
+ * Format: <story-id>.html (e.g. 1732856959000-abc123.html)
+ * Uses the unique story ID to prevent filename collisions
+ * 
+ * Previously used date-based timestamp which caused collisions
+ * when multiple stories were created on the same date.
  */
 const generateHtmlFilename = (story: Story): string => {
-  const timestamp = new Date(story.date).getTime();
-  return `${timestamp}.html`;
+  // Use story ID directly for uniqueness
+  // Sanitize the ID to be safe for filenames (replace unsafe chars with dashes)
+  const safeId = story.id.replace(/[^a-zA-Z0-9-_]/g, '-');
+  return `${safeId}.html`;
 };
 
 
 
 /**
  * Generate content with frontmatter
+ * 
+ * IMPORTANT: The 'id' field is stored in frontmatter to ensure
+ * consistency between local and GitHub storage. This fixes the
+ * bug where IDs were extracted from filenames, causing mismatches.
  */
 const generateContent = (story: Story): string => {
   const frontmatter = `---
+id: "${story.id}"
 title: "${story.title}"
 date: "${story.date}"
 location: "${story.location}"
@@ -575,6 +585,10 @@ export const fetchAllStories = async (): Promise<Story[]> => {
 
 /**
  * Parse HTML content with frontmatter into Story object
+ * 
+ * IMPORTANT: The 'id' field is now read from frontmatter (if available)
+ * rather than being extracted from the filename. This ensures consistency
+ * between local and GitHub storage and fixes duplicate story bugs.
  */
 const parseHtmlContent = (content: string, path: string): Story | null => {
   try {
@@ -587,7 +601,7 @@ const parseHtmlContent = (content: string, path: string): Story | null => {
     }
     
     const [, frontmatter, htmlBody] = match;
-    const metadata: any = {};
+    const metadata: Record<string, string> = {};
     
     frontmatter.split('\n').forEach(line => {
       const parts = line.split(':');
@@ -601,9 +615,14 @@ const parseHtmlContent = (content: string, path: string): Story | null => {
       }
     });
 
+    // CRITICAL FIX: Use ID from frontmatter if available, otherwise fall back to filename
+    // This ensures that the same story ID is used locally and on GitHub
+    const filenameId = path.replace('stories/', '').replace('.html', '');
+    const storyId = metadata.id || filenameId;
+
     // Body is already HTML - use directly
     return {
-      id: path.replace('stories/', '').replace('.html', ''),
+      id: storyId,
       title: metadata.title || 'Untitled',
       date: metadata.date || new Date().toISOString(),
       location: metadata.location || '',
