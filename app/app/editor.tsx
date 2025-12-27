@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, KeyboardAvoidingView, Platform, Modal, Keyboard, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, KeyboardAvoidingView, Platform, Modal, Keyboard, ActivityIndicator, Dimensions, LayoutChangeEvent } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors } from '@/theme/colors';
 import { typography } from '@/theme/typography';
@@ -18,11 +18,15 @@ import {
   RichText, 
   Toolbar, 
   useEditorBridge, 
+  useBridgeState,
   TenTapStartKit,
   CoreBridge,
   DEFAULT_TOOLBAR_ITEMS,
   type ToolbarItem,
 } from '@10play/tentap-editor';
+
+const HEADER_HEIGHT = 56;
+const TOOLBAR_HEIGHT = 74;
 
 interface UploadState {
   id: string;
@@ -44,6 +48,12 @@ export default function EditorScreen() {
   const [activeUploads, setActiveUploads] = useState<Map<string, UploadState>>(new Map());
   const { isOffline } = useNetworkStatus();
   const { location: detectedLocation, coordinates: detectedCoordinates, loading: detectingLocation, error: locationError, detectLocation } = useLocation();
+  
+  // Refs and state for focus-aware scrolling
+  const scrollViewRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
+  const [metaSectionHeight, setMetaSectionHeight] = useState(0);
+  const screenHeight = Dimensions.get('window').height;
 
   // Custom CSS for cozy notebook aesthetic
   const customEditorCSS = `
@@ -162,6 +172,40 @@ export default function EditorScreen() {
       },
     },
   });
+
+  // Track editor focus state
+  const editorState = useBridgeState(editor);
+
+  // Calculate available height for editor when keyboard is active
+  const calculateEditorMinHeight = useCallback(() => {
+    if (keyboardHeight === 0) {
+      return 300; // Default minimum height when keyboard is hidden
+    }
+    // Available height = screen - safeArea top - header - toolbar - keyboard - safeArea bottom
+    const availableHeight = screenHeight - insets.top - HEADER_HEIGHT - TOOLBAR_HEIGHT - keyboardHeight;
+    return Math.max(availableHeight, 200); // Ensure at least 200px
+  }, [keyboardHeight, screenHeight, insets.top]);
+
+  // Auto-scroll to editor when it gains focus and keyboard is up
+  useEffect(() => {
+    if (editorState.isFocused && keyboardHeight > 0 && metaSectionHeight > 0) {
+      // Small delay to ensure layout is complete
+      const timer = setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          y: metaSectionHeight,
+          animated: true,
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [editorState.isFocused, keyboardHeight, metaSectionHeight]);
+
+  // Handle meta section layout measurement
+  const handleMetaSectionLayout = useCallback((event: LayoutChangeEvent) => {
+    const { height, y } = event.nativeEvent.layout;
+    // Total height to scroll = y position + height of meta section
+    setMetaSectionHeight(y + height);
+  }, []);
 
   useEffect(() => {
     if (storyId) {
@@ -579,7 +623,14 @@ export default function EditorScreen() {
           </View>
         </View>
 
-        <View style={styles.contentWrapper}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.contentWrapper}
+          contentContainerStyle={styles.scrollContentContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+        >
           <TextInput
             style={styles.titleInput}
             placeholder="Story Title..."
@@ -588,7 +639,7 @@ export default function EditorScreen() {
             onChangeText={setTitle}
             multiline
           />
-          <View style={styles.metaContainer}>
+          <View style={styles.metaContainer} onLayout={handleMetaSectionLayout}>
             <CityAutocomplete
               value={location}
               onLocationSelect={(selectedLocation, selectedCoordinates) => {
@@ -608,13 +659,16 @@ export default function EditorScreen() {
             </Text>
           </View>
 
-          <View style={styles.editorWrapper}>
+          <View style={[
+            styles.editorWrapper,
+            { minHeight: calculateEditorMinHeight() }
+          ]}>
             <RichText
               editor={editor}
               onLoad={() => setEditorReady(true)}
             />
           </View>
-        </View>
+        </ScrollView>
 
         <View style={[styles.toolbarWrapper, { marginBottom: keyboardHeight }]}>
           <View style={styles.toolbarContainer}>
@@ -758,6 +812,9 @@ const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  scrollContentContainer: {
+    flexGrow: 1,
   },
   titleInput: {
     fontFamily: typography.fonts.display,
